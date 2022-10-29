@@ -1,0 +1,20 @@
+query FetchImagesByTag($tag: String!) {
+    tag(name: $tag) {
+        postPager(type: BEST) {
+            id
+            count
+                posts(page: 1) {
+                    tags {
+                        name
+                    }
+                attributes {
+                    id
+                    type
+                    image {
+                        type
+                    }
+                }
+            }
+        }
+    }
+}

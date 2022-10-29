@@ -1,0 +1,560 @@
+type Query {
+  # Tags for tag autocomplete by query
+  tagAutocomplete(mask: String!): [Tag!]!
+
+  # Logged in user profile
+  me: Profile
+
+  # User by username
+  user(username: String!): User
+
+  # Tag by name
+  tag(name: String!): Tag
+
+  # Best 10 posts in the week
+  weekTopPosts(year: Int!, week: Int!, nsfw: Boolean): [Post!]!
+
+  # Best 10 posts in the year
+  yearTopPosts(year: Int!, nsfw: Boolean): [Post!]!
+
+  # Posts, that were changed in specified day within 30 days. Used by external scanners.
+  changedPosts(day: Date): [Post!]!
+
+  # Searches posts using full-text search
+  search(
+    query: String!
+    tagNames: [String!]
+    username: String
+    showNsfw: Boolean
+    showUnsafe: Boolean
+  ): SearchResult!
+
+  # Gets tags that will be automatically added/deleted to/from a post created with specified tags
+  initialTags(tags: [String!]!): [Tag!]!
+
+  # For debug
+  rateLimit: RateLimitInfo
+
+  # Amount of donated money this month
+  donated: Int!
+
+  # Trending tags
+  trends: [Tag!]!
+
+  # Top tags by subscribers count
+  tagTopBySubscribers(nsfw: Boolean): TagTopBySubscribers!
+
+  # Top comments by rating
+  commentTop(nsfw: Boolean): CommentTop!
+
+  # 3 random domains
+  fandomePromo: [Domain!]!
+  node(id: ID!): Node
+}
+
+type Tag implements Node {
+  id: ID!
+  articlePost: Post
+  articleImage: Image
+  bigImage: Image
+  category: Tag
+  count: Int!
+  image: Image
+
+  # Main synonym of this tag. The tag itself if no synonyms.
+  mainTag: Tag!
+
+  # Previously named 'tag'. The main name of the tag.
+  name: String!
+
+  # Previously named 'name'. Used for seo only. Most tags has the same value as `name`.
+  seoName: String!
+
+  # Erotic flag
+  nsfw: Boolean!
+  rating: Float!
+  subscribers: Int!
+  synonyms: String
+
+  # Porno flag
+  unsafe: Boolean!
+  showAsCategory: Boolean!
+  postPager(type: PostLineType!, favoriteType: PostLineType): PostPager!
+  tagPager(type: TagLineType!): TagPager!
+  favoriteTag: FavoriteTag
+  subTagsMenu: [Tag!]
+  subTags: [Tag!]
+
+  # Recursive category list
+  hierarchy: [Tag!]!
+}
+
+# Any object implementing this type can be found by ID through `Query.node`.
+interface Node {
+  # Global identifier that can be used to resolve any Node implementation.
+  id: ID!
+}
+
+type Post implements Content & Node {
+  id: ID!
+  commentsCount: Int!
+  createdAt: DateTimeTz!
+
+  # Flags post as erotic
+  nsfw: Boolean!
+  rating: Float!
+  text: String!
+
+  # Flags post as porno
+  unsafe: Boolean!
+
+  # Value is changed when post is edited and/or post tags are edited
+  contentVersion: Int!
+  locale: String!
+  user: User!
+  attributes: [Attribute!]!
+  tags: [Tag!]!
+  bestComments: [Comment!]!
+  comments: [Comment!]!
+  vote: PostVote
+  favorite: Boolean!
+  minusThreshold: Float!
+  header: String
+  seoAttributes: PostSeoAttributes!
+  poll: Poll
+}
+
+# Represents any user-created content with attributes inside
+interface Content {
+  id: ID!
+  text: String!
+  attributes: [Attribute!]!
+}
+
+# Content attribute - picture or embed
+interface Attribute {
+  id: ID!
+  type: AttributeType!
+  insertId: Int
+  image: Image!
+}
+
+enum AttributeType {
+  PICTURE
+  YOUTUBE
+  VIMEO
+  COUB
+  SOUNDCLOUD
+  BANDCAMP
+}
+
+type Image implements Node {
+  width: Int!
+  height: Int!
+  comment: String
+  type: ImageType!
+  hasVideo: Boolean!
+  id: ID!
+}
+
+enum ImageType {
+  PNG
+  JPEG
+  GIF
+  BMP
+  TIFF
+  MP4
+  WEBM
+}
+
+# A datetime and timezone string in ISO 8601 format `Y-m-dTH:i:sO`, e.g. `2020-04-20T13:53:12+02:00`.
+scalar DateTimeTz
+
+type User implements Node {
+  active: Boolean!
+  about: String
+  bestPostNum: Int!
+  createdAt: Date!
+  goodPostNum: Int!
+  hideSubscriptionsRatings: Boolean!
+  lastVisit: Date!
+  postPager: PostPager!
+
+  # Top 10 user tag ratings
+  topTagRatings: [FavoriteTag!]
+  postNum: Int!
+  commentNum: Int!
+  sequentialVisits: Int!
+  ratingWeek: Float!
+  rating: Float!
+  username: String!
+  userState: UserState
+  id: ID!
+}
+
+# A date string with format `Y-m-d`, e.g. `2011-05-23`.
+scalar Date
+
+type PostPager implements Node {
+  id: ID!
+  posts(
+    page: Int
+
+    # Deprecated, use page instead
+    offset: Int
+  ): [Post!]!
+  count: Int!
+}
+
+type FavoriteTag {
+  tag: Tag!
+  rating: Float!
+  state: FavoriteTagState!
+  user: User!
+}
+
+enum FavoriteTagState {
+  SUBSCRIBED
+  UNSUBSCRIBED
+  BLOCKED
+  MODERATED
+}
+
+enum UserState {
+  NEUTRAL
+  FRIEND
+  BLOCKED
+}
+
+type Comment implements Content & Node {
+  id: ID!
+  text: String!
+  createdAt: DateTimeTz!
+
+  # Parent Comment or Post
+  parent: Content
+  post: Post
+  rating: Float!
+  level: Int!
+  user: User!
+  attributes: [Attribute!]!
+  vote: CommentVote
+}
+
+type CommentVote {
+  createdAt: DateTimeTz!
+  power: Float!
+  comment: Comment!
+  user: User!
+}
+
+type PostVote {
+  createdAt: DateTimeTz!
+  power: Float!
+  post: Post!
+  user: User!
+}
+
+type PostSeoAttributes {
+  title: String!
+  description: String!
+  ocr: String
+  similarPosts: [ID!]!
+}
+
+type Poll {
+  question: String!
+  answers: [PollAnswer!]!
+  pollVote: ID
+}
+
+type PollAnswer implements Node {
+  id: ID!
+  answer: String!
+  count: Int!
+}
+
+enum PostLineType {
+  ALL
+  NEW
+  GOOD
+  BEST
+}
+
+enum TagLineType {
+  NEW
+  BEST
+}
+
+type TagPager implements Node {
+  id: ID!
+  tags(page: Int): [Tag!]!
+  count: Int!
+}
+
+# Profile of the authenticated user
+type Profile {
+  user: User!
+  token: String!
+  blockedTags: [Tag!]!
+  subscribedTags: [Tag!]!
+  moderatedTags: [Tag!]!
+  blockedUsers: [User!]!
+  gifByClick: Boolean!
+  favoritePostPager: PostPager!
+}
+
+type SearchResult {
+  postPager: PostPager
+  tags: [Tag!]
+}
+
+type RateLimitInfo {
+  remainingWeight: Int!
+  weight: Int!
+  queryCount: Int!
+  cacheHitCount: Int!
+  cacheMissCount: Int!
+  cacheBatchCount: Int!
+}
+
+type TagTopBySubscribers {
+  all: [Tag!]!
+  week: [Tag!]!
+  two_days: [Tag!]!
+}
+
+type CommentTop {
+  week: [Comment!]!
+  two_days: [Comment!]!
+}
+
+type Domain implements Node {
+  tag: Tag!
+  name: String!
+  id: ID!
+}
+
+type Mutation {
+  login(name: String!, password: String!): Query!
+  logout: Query!
+
+  # Appends a new comment to a post or another comment
+  comment(
+    id: ID!
+    text: String!
+    files: [Upload!]
+  ): CreateCommentMutationResult!
+
+  # Add/delete Post to/from Favorite
+  favorite(id: ID!, requestedState: Boolean!): Query!
+
+  # Subscribe, unsubscribe to tags, block tag
+  favoriteTag(id: ID!, requestedState: FavoriteTagState!): Query!
+
+  # Befriend or block user
+  friend(user: ID!, requestedState: UserState!): Query!
+
+  # Adds or changes vote for post or comment
+  vote(id: ID!, vote: VoteType!): Query!
+
+  # Votes in post poll
+  pollVote(answer: ID!): Query!
+
+  # Adding tag to the post
+  addTag(post: ID!, tag: String!): Query!
+
+  # Removing tag from the post
+  removeTag(post: ID!, tag: ID!): Query!
+}
+
+# Uploaded file
+scalar Upload
+
+type CreateCommentMutationResult {
+  comment: Comment
+  query: Query!
+}
+
+enum VoteType {
+  PLUS
+  MINUS
+}
+
+interface AttributePicture {
+  id: ID!
+  type: AttributeType!
+  insertId: Int
+  image: Image!
+}
+
+interface AttributeEmbed {
+  id: ID!
+  type: AttributeType!
+  insertId: Int
+  image: Image!
+  value: String!
+}
+
+type PostAttributePicture implements AttributePicture & Attribute & Node {
+  id: ID!
+  post: Post
+  type: AttributeType!
+  insertId: Int
+  image: Image!
+}
+
+type PostAttributeEmbed implements AttributeEmbed & Attribute & Node {
+  id: ID!
+  post: Post
+  type: AttributeType!
+  insertId: Int
+  value: String!
+  image: Image!
+}
+
+type CommentAttributePicture implements AttributePicture & Attribute & Node {
+  id: ID!
+  comment: Comment!
+  type: AttributeType!
+  insertId: Int
+  image: Image!
+}
+
+type CommentAttributeEmbed implements AttributeEmbed & Attribute & Node {
+  id: ID!
+  comment: Comment!
+  type: AttributeType!
+  insertId: Int
+  value: String!
+  image: Image!
+}
+
+# Directions for ordering a list of records.
+enum SortOrder {
+  # Sort records in ascending order.
+  ASC
+
+  # Sort records in descending order.
+  DESC
+}
+
+# Aggregate functions when ordering by a relation without specifying a column.
+enum OrderByRelationAggregateFunction {
+  # Amount of items.
+  COUNT
+}
+
+# Aggregate functions when ordering by a relation that may specify a column.
+enum OrderByRelationWithColumnAggregateFunction {
+  # Average.
+  AVG
+
+  # Minimum.
+  MIN
+
+  # Maximum.
+  MAX
+
+  # Sum.
+  SUM
+
+  # Amount of items.
+  COUNT
+}
+
+# Allows ordering a list of records.
+input OrderByClause {
+  # The column that is used for ordering.
+  column: String!
+
+  # The direction that is used for ordering.
+  order: SortOrder!
+}
+
+# Information about pagination using a fully featured paginator.
+type PaginatorInfo {
+  # Number of items in the current page.
+  count: Int!
+
+  # Index of the current page.
+  currentPage: Int!
+
+  # Index of the first item in the current page.
+  firstItem: Int
+
+  # Are there more pages after this one?
+  hasMorePages: Boolean!
+
+  # Index of the last item in the current page.
+  lastItem: Int
+
+  # Index of the last available page.
+  lastPage: Int!
+
+  # Number of items per page.
+  perPage: Int!
+
+  # Number of total available items.
+  total: Int!
+}
+
+# Information about pagination using a simple paginator.
+type SimplePaginatorInfo {
+  # Number of items in the current page.
+  count: Int!
+
+  # Index of the current page.
+  currentPage: Int!
+
+  # Index of the first item in the current page.
+  firstItem: Int
+
+  # Index of the last item in the current page.
+  lastItem: Int
+
+  # Number of items per page.
+  perPage: Int!
+
+  # Are there more pages after this one?
+  hasMorePages: Boolean!
+}
+
+# Information about pagination using a Relay style cursor connection.
+type PageInfo {
+  # When paginating forwards, are there more items?
+  hasNextPage: Boolean!
+
+  # When paginating backwards, are there more items?
+  hasPreviousPage: Boolean!
+
+  # The cursor to continue paginating backwards.
+  startCursor: String
+
+  # The cursor to continue paginating forwards.
+  endCursor: String
+
+  # Total number of nodes in the paginated connection.
+  total: Int!
+
+  # Number of nodes in the current page.
+  count: Int!
+
+  # Index of the current page.
+  currentPage: Int!
+
+  # Index of the last available page.
+  lastPage: Int!
+}
+
+# Specify if you want to include or exclude trashed results from a query.
+enum Trashed {
+  # Only return trashed results.
+  ONLY
+
+  # Return both trashed and non-trashed results.
+  WITH
+
+  # Only return non-trashed results.
+  WITHOUT
+}
