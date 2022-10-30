@@ -14,15 +14,18 @@ import okhttp3.Request
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.codec.digest.MessageDigestAlgorithms
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
+import javax.imageio.ImageIO
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
 
 private val log = KotlinLogging.logger {}
 
-class JoyreactorScrapper(private val config: Joyreactor) {
+class JoyreactorScrapper(private val config: Config.Joyreactor) {
     private val okHttpClient = OkHttpClient.Builder().build()
     private val regex = Regex("[ ./?#]|\\s")
     private val dirCache = scanDirectory(File("images/joyreactor"))
@@ -90,7 +93,7 @@ class JoyreactorScrapper(private val config: Joyreactor) {
                                                 if (!dir.exists()) {
                                                     dir.mkdirs()
                                                 }
-                                                file.writeBytes(bytes)
+                                                file.writeBytes(removeBottomJoyreactorLine(bytes, file.extension))
                                                 log.info { "$file saved".paintGreen() }
                                             }
                                         }
@@ -114,6 +117,15 @@ class JoyreactorScrapper(private val config: Joyreactor) {
 
     private fun escapeTag(tag: String): String {
         return tag.replace(regex, "-")
+    }
+
+    private fun removeBottomJoyreactorLine(imgBytes: ByteArray, format: String): ByteArray {
+        ImageIO.setUseCache(false)
+        val img = ImageIO.read(ByteArrayInputStream(imgBytes))
+        val newImg = img.getSubimage(0, 0, img.width, img.height - 14)
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        ImageIO.write(newImg, format, byteArrayOutputStream)
+        return byteArrayOutputStream.toByteArray()
     }
 
     private suspend fun download(url: String): ByteArray? = withContext(Dispatchers.IO) {

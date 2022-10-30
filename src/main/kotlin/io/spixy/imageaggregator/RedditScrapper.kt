@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 private val log = KotlinLogging.logger {}
 private val allowedFileExtensions = setOf("jpg", "jpeg")
 
-class RedditScrapper(private val config: Reddit) {
+class RedditScrapper(private val config: Config.Reddit) {
     private val client = OkHttpClient.Builder()
         .authenticator(Authenticator { _, response ->
             if(response.request.header("Authorization") != null) {

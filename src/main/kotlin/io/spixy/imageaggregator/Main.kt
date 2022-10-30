@@ -15,6 +15,7 @@ fun main() {
         config.joyreactor?.let { JoyreactorScrapper(it).start(this) }
         config.reddit?.let { RedditScrapper(it).start(this) }
         RandomQueue.start(this)
+        WebUI(config.webUi).start(this)
     }
     log.info { "App closed" }
 }

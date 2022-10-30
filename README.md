@@ -3,6 +3,10 @@ Background process which download new images from Reddit and Joyreactor
 
 ## config.yml
 ```yaml
+# Web UI settings
+webUi:
+  # localhost port
+  port: 8080
 # Joyreactor settings
 joyreactor:
   # Tags list for find, filter and download images
