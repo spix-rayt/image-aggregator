@@ -11,7 +11,6 @@ private val log = KotlinLogging.logger {}
 
 fun main() {
     val config = Yaml.default.decodeFromStream<Config>(File("config.yml").inputStream().buffered())
-    log.info { "Config loaded: $config" }
     runBlocking {
         config.joyreactor?.let { JoyreactorScrapper(it).start(this) }
         config.reddit?.let { RedditScrapper(it).start(this) }

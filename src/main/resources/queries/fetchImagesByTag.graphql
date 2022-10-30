@@ -1,12 +1,12 @@
-query FetchImagesByTag($tag: String!) {
+query FetchImagesByTag($tag: String!, $page: Int) {
     tag(name: $tag) {
-        postPager(type: BEST) {
+        postPager(type: GOOD) {
             id
             count
-                posts(page: 1) {
-                    tags {
-                        name
-                    }
+            posts(page: $page) {
+                tags {
+                    name
+                }
                 attributes {
                     id
                     type

@@ -2,9 +2,8 @@ package io.spixy.imageaggregator
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.*
 import mu.KotlinLogging
 import okhttp3.Authenticator
 import okhttp3.Credentials
@@ -15,8 +14,10 @@ import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.codec.digest.MessageDigestAlgorithms
 import java.io.File
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.seconds
 
 private val log = KotlinLogging.logger {}
+private val allowedFileExtensions = setOf("jpg", "jpeg")
 
 class RedditScrapper(private val config: Reddit) {
     private val client = OkHttpClient.Builder()
@@ -33,25 +34,25 @@ class RedditScrapper(private val config: Reddit) {
                 .build()
         })
         .build()
+
+    private val dirCache = scanDirectory(File("images/reddit"))
+
     private val gson = Gson()
-    var saved = 0
-        private set
-    var exists = 0
-        private set
 
     suspend fun start(coroutineScope: CoroutineScope) = coroutineScope.launch {
-        log.info { "RedditScrapper started" }
+        log.info { "RedditScrapper started".paintGreen() }
         while (true) {
             val token = getToken()
             log.info { "Reddit token aquired" }
-            config.subreddits.forEach { subreddit ->
+            config.subreddits.shuffled().forEach { subreddit ->
                 scrapSubreddit(subreddit, token)
+                delay(5.seconds)
             }
             delay(1.hours)
         }
     }
 
-    fun getToken(): String {
+    private fun getToken(): String {
         val call = client.newCall(
             Request.Builder()
                 .url("https://www.reddit.com/api/v1/access_token")
@@ -74,7 +75,7 @@ class RedditScrapper(private val config: Reddit) {
         }
     }
 
-    private fun scrapSubscribedSubreddits(token: String, after: String? = null) {
+    private fun fetchSubscribedSubreddits(token: String, after: String? = null): List<String> {
         val url = if(after != null) {
             "https://oauth.reddit.com/subreddits/mine/subscriber?limit=100&after=$after"
         } else {
@@ -88,19 +89,12 @@ class RedditScrapper(private val config: Reddit) {
                 .build()
         )
 
-        call.execute().use { response ->
+        return call.execute().use { response ->
             response.body?.string()?.let { body ->
-                val subreddits = parseSubreddits(body)
-                    .filter { it.url.split("/")[1] == "r" }
-
-                subreddits.forEach {
-                    scrapSubreddit(it.url.split("/")[2], token)
-                }
-
-                subreddits.lastOrNull()?.let { lastSubreddit ->
-                    scrapSubscribedSubreddits(lastSubreddit.name)
-                }
-            }
+                parseSubreddits(body)
+                    .filter { it.urlOverriddenByDest.split("/")[1] == "r" }
+                    .map { it.urlOverriddenByDest.split("/")[2] }
+            } ?: emptyList()
         }
     }
 
@@ -114,8 +108,8 @@ class RedditScrapper(private val config: Reddit) {
         )
 
         call.execute().use { response ->
-            response.body?.string()?.let { body ->
-                saveRedditImages(body, 40)
+            response.body?.string()?.let { json ->
+                saveRedditImages(json, 40)
             }
         }
     }
@@ -142,42 +136,42 @@ class RedditScrapper(private val config: Reddit) {
                         .getAsJsonObject("data"), Data::class.java
                 )
             }
-            .filter { it.url.endsWith(".jpg") }
+            .filter { data -> allowedFileExtensions.any { ext -> data.urlOverriddenByDest.endsWith(ext) } }
             .take(limit)
             .forEach {
-                RandomQueue.add {
-                    val bytes = download(it.url)
-                    val digest = DigestUtils(MessageDigestAlgorithms.MD5).digestAsHex(bytes)
-                    File("images/reddit/${it.subreddit}/${it.author}_${digest.take(12)}.jpg").let { file ->
-                        if(!file.exists()) {
+                val fileName = it.urlOverriddenByDest.split("/").last()
+                val file = File("images/reddit/${it.subreddit}/${it.author}_$fileName")
+                if(!file.exists()) {
+                    RandomQueue.add {
+                        val bytes = download(it.urlOverriddenByDest)
+                        val digest = DigestUtils(MessageDigestAlgorithms.MD5).digestAsHex(bytes)
+                        if (!dirCache.digests.contains(digest)) {
                             val dir = file.parentFile
-                            if(!dir.exists()) {
+                            if (!dir.exists()) {
                                 dir.mkdirs()
                             }
                             file.writeBytes(bytes)
-                            log.info { "${it.subreddit} ${it.author} ${digest.take(12)} saved" }
-                            saved++
-                        } else {
-                            exists++
+                            log.info { "$file saved".paintGreen() }
                         }
                     }
                 }
             }
     }
 
-    private fun download(url: String): ByteArray {
+    private suspend fun download(url: String): ByteArray = withContext(Dispatchers.IO) {
         log.info { "download $url" }
         val call = client.newCall(
             Request.Builder().url(url).build()
         )
 
         call.execute().use {
-            return it.body?.bytes() ?: throw RuntimeException("no bytes in $url")
+            it.body?.bytes() ?: throw RuntimeException("no bytes in $url")
         }
     }
 
     class Data {
-        var url: String = ""
+        @SerializedName("url_overridden_by_dest")
+        var urlOverriddenByDest: String = ""
         var name: String = ""
         var author: String = ""
         var subreddit: String = ""

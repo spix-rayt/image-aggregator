@@ -33,6 +33,8 @@ dependencies {
     implementation 'io.github.microutils:kotlin-logging-jvm:3.0.2'
     implementation group: 'ch.qos.logback', name: 'logback-classic', version: '1.4.4'
     implementation 'ch.qos.logback:logback-classic:1.4.4'
+
+    implementation "io.ktor:ktor-server-mustache:2.1.2"
 }
 
 test {
@@ -55,7 +57,7 @@ graphql {
     client {
         packageName = "io.spixy.imageaggregator.generated"
         schemaFile = file("$projectDir/src/main/resources/schema.graphql")
-        queryFiles = [file("$projectDir/src/main/resources/queries.graphql")]
+        queryFileDirectory = "${project.projectDir}/src/main/resources/queries"
     }
 }
 

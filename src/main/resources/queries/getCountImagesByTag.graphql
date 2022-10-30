@@ -1,0 +1,8 @@
+query GetCountImagesByTag($tag: String!) {
+    tag(name: $tag) {
+        postPager(type: GOOD) {
+            id
+            count
+        }
+    }
+}

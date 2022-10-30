@@ -20,7 +20,7 @@ reddit:
     password: G0TncQ3Ui5A72A1UfORs0hdBbaW8cn
   # Reddit user login and password
   userCredentials:
-    username: GodImageCollector
+    username: AverageImageCollectingEnjoyer
     password: eW91YXJlaGFja2VyPz8/
   # Subreddits list for find, filter and download images
   subreddits:
