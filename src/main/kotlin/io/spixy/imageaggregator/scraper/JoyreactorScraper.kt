@@ -1,6 +1,7 @@
-package io.spixy.imageaggregator
+package io.spixy.imageaggregator.scraper
 
 import com.expediagroup.graphql.client.spring.GraphQLWebClient
+import io.spixy.imageaggregator.*
 import io.spixy.imageaggregator.generated.FetchImagesByTag
 import io.spixy.imageaggregator.generated.GetCountImagesByTag
 import io.spixy.imageaggregator.generated.enums.AttributeType
@@ -12,8 +13,6 @@ import mu.KotlinLogging
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.apache.commons.codec.binary.Base64
-import org.apache.commons.codec.digest.DigestUtils
-import org.apache.commons.codec.digest.MessageDigestAlgorithms
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -25,15 +24,15 @@ import kotlin.time.Duration.Companion.seconds
 
 private val log = KotlinLogging.logger {}
 
-class JoyreactorScrapper(private val config: Config.Joyreactor) {
+class JoyreactorScraper(private val config: Config.Joyreactor): Scraper() {
     private val okHttpClient = OkHttpClient.Builder().build()
     private val regex = Regex("[ ./?#]|\\s")
-    private val dirCache = scanDirectory(File("images/joyreactor"))
 
     private val client = GraphQLWebClient("https://api.joyreactor.cc/graphql")
 
     suspend fun start(coroutineScope: CoroutineScope) = coroutineScope.launch {
         log.info { "JoyreactorScrapper started".paintGreen() }
+
         while (true) {
             config.tags.shuffled().forEach { tag ->
                 fetchImagesByTag(tag)
@@ -46,7 +45,8 @@ class JoyreactorScrapper(private val config: Config.Joyreactor) {
     private suspend fun fetchImagesByTag(tag: String) {
         log.info { "fetching images by tag $tag" }
         val postsCount = withContext(Dispatchers.IO) {
-            client.execute(GetCountImagesByTag(GetCountImagesByTag.Variables(tag))) }
+            client.execute(GetCountImagesByTag(GetCountImagesByTag.Variables(tag)))
+        }
             .data?.tag?.postPager?.count
             ?: 0.also { log.warn { "Can't get count posts for tag $tag" } }
 
@@ -64,10 +64,10 @@ class JoyreactorScrapper(private val config: Config.Joyreactor) {
                         .forEach { attribute ->
                             if (attribute.type == AttributeType.PICTURE) {
                                 val fileName = extractFileName(post, attribute)
-                                val file = File("images/joyreactor/${escapeTag(tag)}/$fileName")
+                                val file = File("images/download/joyreactor/${escapeTag(tag)}/$fileName")
 
-                                if(!dirCache.fileNames.contains(fileName) && !file.exists()) {
-                                    RandomQueue.add {
+                                if(!hashes.contains(fileName.md5())) {
+                                    RunnableRandomQueue.run {
                                         val url1 = "https://img10.joyreactor.cc/pics/post/full/$fileName"
                                         val url2 = "https://img10.joyreactor.cc/pics/post/$fileName"
                                         var bytes: ByteArray? = null
@@ -87,13 +87,16 @@ class JoyreactorScrapper(private val config: Config.Joyreactor) {
                                         }
 
                                         if (bytes != null) {
-                                            val digest = DigestUtils(MessageDigestAlgorithms.MD5).digestAsHex(bytes)
-                                            if (!dirCache.digests.contains(digest)) {
+                                            bytes = removeBottomJoyreactorLine(bytes, file.extension)
+                                            val fileBytesHash = bytes.md5()
+                                            if (!hashes.contains(fileBytesHash)) {
                                                 val dir = file.parentFile
                                                 if (!dir.exists()) {
                                                     dir.mkdirs()
                                                 }
-                                                file.writeBytes(removeBottomJoyreactorLine(bytes, file.extension))
+                                                file.writeBytes(bytes)
+                                                ImageChangedEventBus.emitEvent(file)
+                                                registerHash(fileBytesHash, fileName.md5())
                                                 log.info { "$file saved".paintGreen() }
                                             }
                                         }
@@ -135,7 +138,7 @@ class JoyreactorScrapper(private val config: Config.Joyreactor) {
         )
 
         call.execute().use {
-            if(it.headers["Content-type"]?.startsWith("image") == true) {
+            if (it.headers["Content-type"]?.startsWith("image") == true) {
                 it.body?.bytes() ?: throw RuntimeException("no bytes in $url")
             } else {
                 null

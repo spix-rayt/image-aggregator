@@ -9,14 +9,14 @@ import kotlin.time.Duration.Companion.seconds
 
 private val log = KotlinLogging.logger {}
 
-object RandomQueue {
+object RunnableRandomQueue {
     private val queue = mutableListOf<suspend CoroutineScope.() -> Unit>()
 
     suspend fun start(coroutineScope: CoroutineScope) = coroutineScope.launch {
-        log.info { "RandomQueue started".paintGreen() }
+        log.info { "RunnableRandomQueue started".paintGreen() }
         while (true) {
             if(queue.isNotEmpty()) {
-                log.info { "RandomQueue size: ${queue.size}" }
+                log.info { "RunnableRandomQueue size: ${queue.size}" }
                 val task = queue.random()
                 queue.remove(task)
                 task.invoke(this)
@@ -30,7 +30,7 @@ object RandomQueue {
         }
     }
 
-    fun add(block: suspend CoroutineScope.() -> Unit) {
+    fun run(block: suspend CoroutineScope.() -> Unit) {
         queue.add(block)
     }
 }

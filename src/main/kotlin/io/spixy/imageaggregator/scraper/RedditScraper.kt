@@ -1,8 +1,9 @@
-package io.spixy.imageaggregator
+package io.spixy.imageaggregator.scraper
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.annotations.SerializedName
+import io.spixy.imageaggregator.*
 import kotlinx.coroutines.*
 import mu.KotlinLogging
 import okhttp3.Authenticator
@@ -10,8 +11,6 @@ import okhttp3.Credentials
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.apache.commons.codec.digest.DigestUtils
-import org.apache.commons.codec.digest.MessageDigestAlgorithms
 import java.io.File
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
@@ -19,7 +18,7 @@ import kotlin.time.Duration.Companion.seconds
 private val log = KotlinLogging.logger {}
 private val allowedFileExtensions = setOf("jpg", "jpeg")
 
-class RedditScrapper(private val config: Config.Reddit) {
+class RedditScraper(private val config: Config.Reddit): Scraper() {
     private val client = OkHttpClient.Builder()
         .authenticator(Authenticator { _, response ->
             if(response.request.header("Authorization") != null) {
@@ -35,12 +34,11 @@ class RedditScrapper(private val config: Config.Reddit) {
         })
         .build()
 
-    private val dirCache = scanDirectory(File("images/reddit"))
-
     private val gson = Gson()
 
     suspend fun start(coroutineScope: CoroutineScope) = coroutineScope.launch {
         log.info { "RedditScrapper started".paintGreen() }
+
         while (true) {
             val token = getToken()
             log.info { "Reddit token aquired" }
@@ -85,7 +83,7 @@ class RedditScrapper(private val config: Config.Reddit) {
         val call = client.newCall(
             Request.Builder()
                 .url(url)
-                .addHeader("Authorization", "Bearer ${token}")
+                .addHeader("Authorization", "Bearer $token")
                 .build()
         )
 
@@ -103,7 +101,7 @@ class RedditScrapper(private val config: Config.Reddit) {
         val call = client.newCall(
             Request.Builder()
                 .url("https://oauth.reddit.com/r/$subreddit/top?limit=100&t=week")
-                .addHeader("Authorization", "Bearer ${token}")
+                .addHeader("Authorization", "Bearer $token")
                 .build()
         )
 
@@ -140,17 +138,20 @@ class RedditScrapper(private val config: Config.Reddit) {
             .take(limit)
             .forEach {
                 val fileName = it.urlOverriddenByDest.split("/").last()
-                val file = File("images/reddit/${it.subreddit}/${it.author}_$fileName")
-                if(!file.exists()) {
-                    RandomQueue.add {
+                val file = File("images/download/reddit/${it.subreddit}/${it.author}_$fileName")
+                val digest = "${it.subreddit}/${it.author} $fileName".md5()
+                if(!hashes.contains(digest)) {
+                    RunnableRandomQueue.run {
                         val bytes = download(it.urlOverriddenByDest)
-                        val digest = DigestUtils(MessageDigestAlgorithms.MD5).digestAsHex(bytes)
-                        if (!dirCache.digests.contains(digest)) {
+                        val fileBytesHash = bytes.md5()
+                        if (!hashes.contains(fileBytesHash)) {
                             val dir = file.parentFile
                             if (!dir.exists()) {
                                 dir.mkdirs()
                             }
                             file.writeBytes(bytes)
+                            ImageChangedEventBus.emitEvent(file)
+                            registerHash(fileBytesHash, digest)
                             log.info { "$file saved".paintGreen() }
                         }
                     }
