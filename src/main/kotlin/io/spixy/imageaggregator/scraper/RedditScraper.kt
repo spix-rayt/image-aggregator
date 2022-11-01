@@ -12,7 +12,9 @@ import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.net.UnknownHostException
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 private val log = KotlinLogging.logger {}
@@ -43,8 +45,13 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
             val token = getToken()
             log.info { "Reddit token aquired" }
             config.subreddits.shuffled().forEach { subreddit ->
-                scrapSubreddit(subreddit, token)
-                delay(5.seconds)
+                try {
+                    scrapSubreddit(subreddit, token)
+                    delay(5.seconds)
+                } catch (e: UnknownHostException) {
+                    log.error(e) {  }
+                    delay(1.minutes)
+                }
             }
             delay(1.hours)
         }

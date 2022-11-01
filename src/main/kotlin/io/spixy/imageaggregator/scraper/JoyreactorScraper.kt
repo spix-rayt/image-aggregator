@@ -17,9 +17,11 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.net.UnknownHostException
 import java.nio.charset.StandardCharsets
 import javax.imageio.ImageIO
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 private val log = KotlinLogging.logger {}
@@ -35,8 +37,13 @@ class JoyreactorScraper(private val config: Config.Joyreactor): Scraper() {
 
         while (true) {
             config.tags.shuffled().forEach { tag ->
-                fetchImagesByTag(tag)
-                delay(5.seconds)
+                try {
+                    fetchImagesByTag(tag)
+                    delay(5.seconds)
+                } catch (e: UnknownHostException) {
+                    log.error(e) {  }
+                    delay(1.minutes)
+                }
             }
             delay(1.hours)
         }

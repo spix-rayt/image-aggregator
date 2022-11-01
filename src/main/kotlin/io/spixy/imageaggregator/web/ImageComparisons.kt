@@ -4,7 +4,10 @@ import io.spixy.imageaggregator.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
+import mu.KotlinLogging
 import java.io.File
+
+private val log = KotlinLogging.logger {}
 
 class ImageComparisons(coroutineScope: CoroutineScope) {
     private val images = ImagePaths.PASS_DIR.toFile().walk()
@@ -31,8 +34,6 @@ class ImageComparisons(coroutineScope: CoroutineScope) {
             null
         }
     }.toMutableList()
-
-
 
     init {
         coroutineScope.launch {
@@ -71,10 +72,13 @@ class ImageComparisons(coroutineScope: CoroutineScope) {
         setNextCurrentImage()
     }
 
-    fun getTop(): List<Image> {
-        images.forEach { it.rating = 0.0 }
+    fun getTop(n: Int): List<Image> {
+        contestAndSort(1000)
+        return images.take(n)
+    }
 
-        repeat(100000) {
+    private fun contestAndSort(times: Int) {
+        repeat(times) {
             recordedComparisons.forEach {
                 if(it.result == ComparisonResult.LEFT) {
                     val eloChangeForLeft = EloRating.calculate(it.left.rating, it.right.rating)
@@ -88,7 +92,7 @@ class ImageComparisons(coroutineScope: CoroutineScope) {
                 }
             }
         }
-        return images.sortedByDescending { it.rating }.take(20)
+        images.sortByDescending { it.rating }
     }
 
     private fun setNextCurrentImage(): LeftAndRightImage? {
@@ -96,8 +100,9 @@ class ImageComparisons(coroutineScope: CoroutineScope) {
             currentImages = null
             return null
         }
-        for(left in images.shuffled()) {
-            for(right in images.shuffled()) {
+        contestAndSort(10)
+        for(left in images.subList(0, images.size / 2).shuffled()) {
+            for(right in images.subList(images.size / 2, images.size).shuffled()) {
                 if(left === right) {
                     break
                 }

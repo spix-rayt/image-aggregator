@@ -42,10 +42,14 @@ class ImagePass(coroutineScope: CoroutineScope) {
         currentImage?.let { currentImage ->
             val newPath = buildNewImageDir(currentImage, ImagePaths.PASS_DIR.name)
             newPath.parentFile.mkdirs()
-            log.info { "Move image $currentImage to $newPath" }
-            Files.move(currentImage.toPath(), newPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            ImageChangedEventBus.emitEvent(newPath)
-            images.remove(currentImage)
+            if(currentImage.exists()) {
+                log.info { "Move image $currentImage to $newPath" }
+                Files.move(currentImage.toPath(), newPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                ImageChangedEventBus.emitEvent(newPath)
+                images.remove(currentImage)
+            } else {
+                log.warn { "Image $currentImage not exists" }
+            }
         }
         currentImage = images.randomOrNull()
     }
@@ -54,10 +58,14 @@ class ImagePass(coroutineScope: CoroutineScope) {
         currentImage?.let { currentImage ->
             val newPath = buildNewImageDir(currentImage, ImagePaths.TRASH_DIR.name)
             newPath.parentFile.mkdirs()
-            log.info { "Move image $currentImage to $newPath" }
-            Files.move(currentImage.toPath(), newPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            ImageChangedEventBus.emitEvent(newPath)
-            images.remove(currentImage)
+            if(currentImage.exists()) {
+                log.info { "Move image $currentImage to $newPath" }
+                Files.move(currentImage.toPath(), newPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                ImageChangedEventBus.emitEvent(newPath)
+                images.remove(currentImage)
+            } else {
+                log.warn { "Image $currentImage not exists" }
+            }
         }
         currentImage = images.randomOrNull()
     }

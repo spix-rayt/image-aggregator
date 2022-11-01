@@ -3,6 +3,7 @@ package io.spixy.imageaggregator
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.codec.digest.MessageDigestAlgorithms
 import java.io.File
+import java.nio.file.Path
 
 const val ANSI_RESET = "\u001B[0m"
 const val ANSI_GREEN = "\u001B[32m"
@@ -31,6 +32,16 @@ fun String.isMd5Hash(): Boolean {
         return false
     }
     return true
+}
+
+fun File.isChildOf(dir: Path): Boolean {
+    return this.toPath().normalize().startsWith(dir.normalize())
+}
+
+fun formatSize(v: Long): String? {
+    if (v < 1024) return "$v B"
+    val z = (63 - java.lang.Long.numberOfLeadingZeros(v)) / 10
+    return String.format("%.1f %siB", v.toDouble() / (1L shl z * 10), " KMGTPE"[z])
 }
 
 fun File.hasImageExtension(): Boolean {
