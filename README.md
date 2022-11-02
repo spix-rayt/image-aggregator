@@ -5,7 +5,7 @@ Background process which download new images from VK, Reddit and Joyreactor
 
 **Screening out images** - watch random image and select save or delete  
 **Images battle** - watch two random images and select which better  
-**Top 50 images** - list of best images based on comparison  
+**Top 50 images** - list of best images based on image battle  
 **Metrics** - Count and size of images  
 
 
