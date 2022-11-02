@@ -1,12 +1,12 @@
 # image-aggregator
-Background process which download new images from Reddit and Joyreactor
+Background process which download new images from VK, Reddit and Joyreactor
 
 ## Web UI pages
 
-**Screening out images** - watch random image and select save or delete
-**Images battle** - watch two random images and select which better
-**Top 50 images** - list of best images based on comparison
-**Metrics** - 
+**Screening out images** - watch random image and select save or delete  
+**Images battle** - watch two random images and select which better  
+**Top 50 images** - list of best images based on comparison  
+**Metrics** - Count and size of images  
 
 
 ## config.yml - create this file before run app
