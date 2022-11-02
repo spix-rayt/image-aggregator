@@ -14,7 +14,7 @@ import kotlin.io.path.name
 
 private val log = KotlinLogging.logger {}
 
-class ImagePass(coroutineScope: CoroutineScope) {
+class ImageScreenOutService(coroutineScope: CoroutineScope) {
     private val images = ImagePaths.DOWNLOAD_DIR.toFile().walk()
         .filter { it.isFile }
         .filter { it.hasImageExtension() }
@@ -44,6 +44,9 @@ class ImagePass(coroutineScope: CoroutineScope) {
             newPath.parentFile.mkdirs()
             if(currentImage.exists()) {
                 log.info { "Move image $currentImage to $newPath" }
+                if(newPath.exists()) {
+                    log.warn { "$newPath already exists. overwriting..." }
+                }
                 Files.move(currentImage.toPath(), newPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 ImageChangedEventBus.emitEvent(newPath)
                 images.remove(currentImage)
@@ -60,6 +63,9 @@ class ImagePass(coroutineScope: CoroutineScope) {
             newPath.parentFile.mkdirs()
             if(currentImage.exists()) {
                 log.info { "Move image $currentImage to $newPath" }
+                if(newPath.exists()) {
+                    log.warn { "$newPath already exists. overwriting..." }
+                }
                 Files.move(currentImage.toPath(), newPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 ImageChangedEventBus.emitEvent(newPath)
                 images.remove(currentImage)

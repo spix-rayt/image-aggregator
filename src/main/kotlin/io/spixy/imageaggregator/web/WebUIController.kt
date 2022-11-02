@@ -1,7 +1,6 @@
 package io.spixy.imageaggregator.web
 
 import com.github.mustachejava.DefaultMustacheFactory
-import com.github.mustachejava.TemplateFunction
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
@@ -13,16 +12,15 @@ import io.spixy.imageaggregator.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
-import okhttp3.internal.wait
-import org.apache.commons.io.FileUtils
 import java.io.File
+import kotlin.math.roundToLong
 
-private val log = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
-class WebUI(private val config: Config.WebUI) {
+class WebUIController(private val config: Config.WebUI) {
     suspend fun start(coroutineScope: CoroutineScope) = coroutineScope.launch {
-        val imagePass = ImagePass(coroutineScope)
-        val imageComparisons = ImageComparisons(coroutineScope)
+        val imageScreenOutService = ImageScreenOutService(coroutineScope)
+        val imagesBattleService = ImagesBattleService(coroutineScope)
 
         embeddedServer(Netty, port = config.port) {
             install(Mustache) {
@@ -34,90 +32,89 @@ class WebUI(private val config: Config.WebUI) {
                     call.respond(render("index.hbs"))
                 }
 
-                get("/downloadsFilter") {
-                    val currentImage = imagePass.getCurrent()
+                get("/screenOut") {
                     try {
-                        val content = currentImage?.let { currentImage ->
+                        val content = imageScreenOutService.getCurrent()?.let { currentImage ->
                             val model = mapOf(
                                 "img" to Img("/${currentImage.toPath()}")
                             )
-                            MustacheContent("screen_out.hbs", model)
-                        } ?: MustacheContent("no_images.hbs", null)
+                            render("screen_out.hbs", model)
+                        } ?: render("no_images.hbs")
                         call.respond(content)
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
-                get("/move/passAndGoNext") {
+                get("/screenOut/pass") {
                     try {
-                        imagePass.passAndGoNext()
-                        call.respondRedirect("/downloadsFilter")
+                        imageScreenOutService.passAndGoNext()
+                        call.respondRedirect("/screenOut")
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
-                get("/move/delete") {
+                get("/screenOut/delete") {
                     try {
-                        imagePass.delete()
-                        call.respondRedirect("/downloadsFilter")
+                        imageScreenOutService.delete()
+                        call.respondRedirect("/screenOut")
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
-                get("/compare") {
+                get("/battle") {
                     try {
-                        val content = imageComparisons.getCurrent()?.let { current ->
+                        val content = imagesBattleService.getCurrent()?.let { current ->
                             val model = mapOf(
                                 "left" to Img("/${current.left.file.toPath()}"),
                                 "right" to Img("/${current.right.file.toPath()}")
                             )
-                            MustacheContent("compare.hbs", model)
-                        } ?: MustacheContent("no_images.hbs", null)
+                            render("battle.hbs", model)
+                        } ?: render("no_images.hbs")
                         call.respond(content)
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
-                get("/comparisonResult/left") {
+                get("/battle/leftWin") {
                     try {
-                        imageComparisons.leftBetter()
-                        call.respondRedirect("/compare")
+                        imagesBattleService.leftBetter()
+                        call.respondRedirect("/battle")
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
-                get("/comparisonResult/right") {
+                get("/battle/rightWin") {
                     try {
-                        imageComparisons.rightBetter()
-                        call.respondRedirect("/compare")
+                        imagesBattleService.rightBetter()
+                        call.respondRedirect("/battle")
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
-                get("/comparisonResult/skip") {
+                get("/battle/skip") {
                     try {
-                        imageComparisons.skip()
-                        call.respondRedirect("/compare")
+                        imagesBattleService.skip()
+                        call.respondRedirect("/battle")
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
                 get("/top") {
                     try {
-                        val images = imageComparisons.getTop(20)
+                        val images = imagesBattleService.getTop(50)
                         val model = mapOf(
-                            "images" to images.map { Img("/${it.file.toPath()}", it.rating) }
+                            "images" to images.map { Img("/${it.file.toPath()}", it.rating.roundToLong()) }
                         )
-                        call.respond(MustacheContent("top.hbs", model))
+                        call.respond(render("top.hbs", model))
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
@@ -125,23 +122,30 @@ class WebUI(private val config: Config.WebUI) {
                     try {
                         var redditImagesNotViewed = 0
                         var joyreactorImagesNotViewed = 0
+                        var vkImagesNotViewed = 0
                         var totalImagesNotViewed = 0
 
                         var redditImagesPass = 0
                         var joyreactorImagesPass = 0
+                        var vkImagesPass = 0
                         var totalImagesPass = 0
 
                         var redditImagesTrash = 0
                         var joyreactorImagesTrash = 0
+                        var vkImagesTrash = 0
                         var totalImagesTrash = 0
 
                         var redditImagesCount = 0
                         var joyreactorImagesCount = 0
+                        var vkImagesCount = 0
                         var totalImagesCount = 0
 
                         var redditImagesSize = 0L
                         var joyreactorImagesSize = 0L
+                        var vkImagesSize = 0L
                         var totalImagesSize = 0L
+
+                        val imageSizes = mutableListOf<Long>()
 
                         ImagePaths.IMAGES_DIR.toFile().walk()
                             .filter { it.isFile }
@@ -178,6 +182,21 @@ class WebUI(private val config: Config.WebUI) {
                                     joyreactorImagesTrash += 1
                                     joyreactorImagesSize += bytesLength
                                 }
+                                if(it.isChildOf(ImagePaths.VK_DOWNLOAD_DIR)) {
+                                    vkImagesCount += 1
+                                    vkImagesNotViewed += 1
+                                    vkImagesSize += bytesLength
+                                }
+                                if(it.isChildOf(ImagePaths.VK_PASS_DIR)) {
+                                    vkImagesCount += 1
+                                    vkImagesPass += 1
+                                    vkImagesSize += bytesLength
+                                }
+                                if(it.isChildOf(ImagePaths.VK_TRASH_DIR)) {
+                                    vkImagesCount += 1
+                                    vkImagesTrash += 1
+                                    vkImagesSize += bytesLength
+                                }
                                 if(it.isChildOf(ImagePaths.DOWNLOAD_DIR)) {
                                     totalImagesNotViewed += 1
                                 }
@@ -189,7 +208,12 @@ class WebUI(private val config: Config.WebUI) {
                                 }
                                 totalImagesCount += 1
                                 totalImagesSize += bytesLength
+                                imageSizes.add(bytesLength)
                             }
+
+                        val bytesPerImage = totalImagesSize / totalImagesCount
+                        val midianImageSize = imageSizes.apply { sort() }[imageSizes.size / 2]
+
                         val content = """
                             Total images not viewed: $totalImagesNotViewed
                             Total images screen out (pass / deleted): $totalImagesPass / $totalImagesTrash
@@ -197,15 +221,20 @@ class WebUI(private val config: Config.WebUI) {
                             
                             Reddit images count: $redditImagesCount
                             Joyreactor images count: $joyreactorImagesCount
+                            VK images count: $vkImagesCount
                             Total images count: $totalImagesCount
                             
                             Reddit images size: ${formatSize(redditImagesSize)}
                             Joyreactor images size: ${formatSize(joyreactorImagesSize)}
+                            VK images size: ${formatSize(vkImagesSize)}
                             Total images size: ${formatSize(totalImagesSize)}
+                            
+                            Average image size: ${formatSize(bytesPerImage)}
+                            Median image size: ${formatSize(midianImageSize)}
                         """.trimIndent()
                         call.respond(content)
                     } catch (e: Exception) {
-                        io.spixy.imageaggregator.web.log.error(e) { }
+                        logger.error(e) { }
                     }
                 }
 
@@ -216,10 +245,10 @@ class WebUI(private val config: Config.WebUI) {
             }
         }.start(wait = false)
 
-        log.info { "WebUI server started".paintGreen() }
+        logger.info { "WebUI server started".paintGreen() }
     }
 
-    private fun render(template: String, model: HashMap<String, Any?>): MustacheContent {
+    private fun render(template: String, model: Map<String, Any?>): MustacheContent {
         return MustacheContent(template, model)
     }
 
@@ -227,5 +256,5 @@ class WebUI(private val config: Config.WebUI) {
         return MustacheContent(template, mapOf("" to ""))
     }
 
-    data class Img(val src: String, val rating: Double = 0.0)
+    data class Img(val src: String, val rating: Long = 0)
 }

@@ -7,9 +7,14 @@ import java.nio.file.Path
 
 const val ANSI_RESET = "\u001B[0m"
 const val ANSI_GREEN = "\u001B[32m"
+const val ANSI_RED = "\u001B[31m"
 
 fun String.paintGreen(): String {
     return "$ANSI_GREEN$this$ANSI_RESET"
+}
+
+fun String.paintRed(): String {
+    return "$ANSI_RED$this$ANSI_RESET"
 }
 
 fun ByteArray.md5(): String {
@@ -38,7 +43,7 @@ fun File.isChildOf(dir: Path): Boolean {
     return this.toPath().normalize().startsWith(dir.normalize())
 }
 
-fun formatSize(v: Long): String? {
+fun formatSize(v: Long): String {
     if (v < 1024) return "$v B"
     val z = (63 - java.lang.Long.numberOfLeadingZeros(v)) / 10
     return String.format("%.1f %siB", v.toDouble() / (1L shl z * 10), " KMGTPE"[z])

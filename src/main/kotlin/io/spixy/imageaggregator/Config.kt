@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Config(
+    val vk: VK? = null,
     val joyreactor: Joyreactor? = null,
     val reddit: Reddit? = null,
     val webUi: WebUI = WebUI()
@@ -18,6 +19,12 @@ data class Config(
         val appCredentials: BasicCredentials,
         val userCredentials: BasicCredentials,
         val subreddits: List<String>
+    )
+
+    @Serializable
+    data class VK(
+        val accessToken: String,
+        val clubs: List<String>
     )
 
     @Serializable

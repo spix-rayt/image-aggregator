@@ -16,14 +16,19 @@ object RunnableRandomQueue {
         log.info { "RunnableRandomQueue started".paintGreen() }
         while (true) {
             if(queue.isNotEmpty()) {
-                log.info { "RunnableRandomQueue size: ${queue.size}" }
+                if(queue.size % 20 == 0) {
+                    log.info { "RunnableRandomQueue size: ${queue.size}" }
+                }
                 val task = queue.random()
                 queue.remove(task)
                 task.invoke(this)
             } else {
-                log.info { "Queue empty. Waiting..." }
-                while (queue.isEmpty()) {
-                    delay(1.seconds)
+                delay(20.seconds)
+                if(queue.isEmpty()) {
+                    log.info { "Queue empty. Waiting..." }
+                    while (queue.isEmpty()) {
+                        delay(1.seconds)
+                    }
                 }
             }
             delay(500.milliseconds)

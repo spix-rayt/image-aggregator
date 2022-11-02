@@ -1,7 +1,15 @@
 # image-aggregator
 Background process which download new images from Reddit and Joyreactor
 
-## config.yml
+## Web UI pages
+
+**Screening out images** - watch random image and select save or delete
+**Images battle** - watch two random images and select which better
+**Top 50 images** - list of best images based on comparison
+**Metrics** - 
+
+
+## config.yml - create this file before run app
 ```yaml
 # Web UI settings
 webUi:
@@ -9,7 +17,7 @@ webUi:
   port: 8080
 # Joyreactor settings
 joyreactor:
-  # Tags list for find, filter and download images
+  # Tags list for download jpegs
   tags:
     - Anime
     - Overwatch
@@ -26,17 +34,25 @@ reddit:
   userCredentials:
     username: AverageImageCollectingEnjoyer
     password: eW91YXJlaGFja2VyPz8/
-  # Subreddits list for find, filter and download images
+  # Subreddits list for download jpegs
   subreddits:
     - pics
     - EarthPorn
+# VK settings
+vk:
+  # VK access_token
+  accessToken: vk1.a.qSH83n9brASpirkdw4heaYBOi4UhOaBuuS0nxNveVIsOBJEaNOwdUbDTyTn2GnLRyxZ3PpMKEP2H-7qpvPr3eJXCR4VNlt3tDozB2yHSxFT72h-zJrevSexdx-ABZgyoxyBHIjIZVFHw4QIVB2g4lKJiglnV2eWJoRKboXEnC5jGvI4am9hKqklW6r6mcK9s8cd-zZgrWr4GoueZ5F2vWA
+  # VK clubs list for download jpegs
+  clubs:
+    - art.photography
+    - esthe
 ```
 
 ## Roadmap
 
 - ☑ Reddit
 - ☑ Joyreactor
-- Vkontakte
+- ☑ Vkontakte
 - Telegram
-- Web interface
+- ☑ Web interface
 - Image organizer

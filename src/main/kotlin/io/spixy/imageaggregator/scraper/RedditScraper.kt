@@ -21,7 +21,7 @@ private val log = KotlinLogging.logger {}
 private val allowedFileExtensions = setOf("jpg", "jpeg")
 
 class RedditScraper(private val config: Config.Reddit): Scraper() {
-    private val client = OkHttpClient.Builder()
+    private val httpClient = OkHttpClient.Builder()
         .authenticator(Authenticator { _, response ->
             if(response.request.header("Authorization") != null) {
                 return@Authenticator null
@@ -58,7 +58,7 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
     }
 
     private fun getToken(): String {
-        val call = client.newCall(
+        val call = httpClient.newCall(
             Request.Builder()
                 .url("https://www.reddit.com/api/v1/access_token")
                 .post(
@@ -87,7 +87,7 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
             "https://oauth.reddit.com/subreddits/mine/subscriber?limit=100"
         }
 
-        val call = client.newCall(
+        val call = httpClient.newCall(
             Request.Builder()
                 .url(url)
                 .addHeader("Authorization", "Bearer $token")
@@ -105,7 +105,7 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
 
     private fun scrapSubreddit(subreddit: String, token: String) {
         log.info { "fetching images from subreddit $subreddit" }
-        val call = client.newCall(
+        val call = httpClient.newCall(
             Request.Builder()
                 .url("https://oauth.reddit.com/r/$subreddit/top?limit=100&t=week")
                 .addHeader("Authorization", "Bearer $token")
@@ -133,6 +133,10 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
 
     private fun saveRedditImages(json: String, limit: Int) {
         val obj = gson.fromJson(json, JsonObject::class.java)
+        if(obj.has("error")) {
+            log.warn { "Subreddit error: $json".paintRed() }
+            return
+        }
         obj.getAsJsonObject("data")
             .getAsJsonArray("children")
             .map { post ->
@@ -147,34 +151,25 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
                 val fileName = it.urlOverriddenByDest.split("/").last()
                 val file = File("images/download/reddit/${it.subreddit}/${it.author}_$fileName")
                 val digest = "${it.subreddit}/${it.author} $fileName".md5()
-                if(!hashes.contains(digest)) {
+                if(isUnknownHash(digest)) {
                     RunnableRandomQueue.run {
-                        val bytes = download(it.urlOverriddenByDest)
-                        val fileBytesHash = bytes.md5()
-                        if (!hashes.contains(fileBytesHash)) {
-                            val dir = file.parentFile
-                            if (!dir.exists()) {
-                                dir.mkdirs()
+                        val bytes = httpClient.downloadImage(it.urlOverriddenByDest)
+                        if(bytes != null) {
+                            val fileBytesHash = bytes.md5()
+                            if (isUnknownHash(fileBytesHash)) {
+                                val dir = file.parentFile
+                                if (!dir.exists()) {
+                                    dir.mkdirs()
+                                }
+                                file.writeBytes(bytes)
+                                ImageChangedEventBus.emitEvent(file)
+                                registerHash(fileBytesHash, digest)
+                                log.info { "$file saved".paintGreen() }
                             }
-                            file.writeBytes(bytes)
-                            ImageChangedEventBus.emitEvent(file)
-                            registerHash(fileBytesHash, digest)
-                            log.info { "$file saved".paintGreen() }
                         }
                     }
                 }
             }
-    }
-
-    private suspend fun download(url: String): ByteArray = withContext(Dispatchers.IO) {
-        log.info { "download $url" }
-        val call = client.newCall(
-            Request.Builder().url(url).build()
-        )
-
-        call.execute().use {
-            it.body?.bytes() ?: throw RuntimeException("no bytes in $url")
-        }
     }
 
     class Data {

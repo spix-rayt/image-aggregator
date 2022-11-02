@@ -6,10 +6,12 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import java.io.File
+import kotlin.random.Random
+import kotlin.random.nextInt
 
 private val log = KotlinLogging.logger {}
 
-class ImageComparisons(coroutineScope: CoroutineScope) {
+class ImagesBattleService(coroutineScope: CoroutineScope) {
     private val images = ImagePaths.PASS_DIR.toFile().walk()
         .filter { it.isFile }
         .filter { it.hasImageExtension() }
@@ -101,21 +103,46 @@ class ImageComparisons(coroutineScope: CoroutineScope) {
             return null
         }
         contestAndSort(10)
-        for(left in images.subList(0, images.size / 2).shuffled()) {
-            for(right in images.subList(images.size / 2, images.size).shuffled()) {
-                if(left === right) {
-                    break
+        if(Random.nextBoolean()) {
+            for(left in images.subList(0, images.size / 2).shuffled()) {
+                for(right in images.subList(images.size / 2, images.size).shuffled()) {
+                    if(left === right) {
+                        break
+                    }
+                    if(recordedComparisons.any { it.left.hash == left.hash && it.right.hash == right.hash }) {
+                        break
+                    }
+                    if(recordedComparisons.any { it.left.hash == right.hash && it.right.hash == left.hash }) {
+                        break
+                    }
+                    currentImages = LeftAndRightImage(left, right)
+                    return currentImages
                 }
-                if(recordedComparisons.any { it.left.hash == left.hash && it.right.hash == right.hash }) {
-                    break
+            }
+        } else {
+            currentImages = null
+            val randomStart = Random.nextInt(images.indices)
+            for(left in images.subList(randomStart, images.size)) {
+                for(right in images.subList(randomStart, images.size)) {
+                    if(left === right) {
+                        break
+                    }
+                    if(recordedComparisons.any { it.left.hash == left.hash && it.right.hash == right.hash }) {
+                        break
+                    }
+                    if(recordedComparisons.any { it.left.hash == right.hash && it.right.hash == left.hash }) {
+                        break
+                    }
+                    currentImages = LeftAndRightImage(left, right)
+                    return currentImages
                 }
-                if(recordedComparisons.any { it.left.hash == right.hash && it.right.hash == left.hash }) {
-                    break
-                }
-                currentImages = LeftAndRightImage(left, right)
+            }
+            if(currentImages == null) {
+                setNextCurrentImage()
                 return currentImages
             }
         }
+
         currentImages = null
         return null
     }

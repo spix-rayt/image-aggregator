@@ -1,6 +1,8 @@
-build
-.idea
-.gradle
+/build
+/.idea
+/.gradle
+/tdlib
+tdlib.log
 
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
