@@ -156,16 +156,7 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
                         val bytes = httpClient.downloadImage(it.urlOverriddenByDest)
                         if(bytes != null) {
                             val fileBytesHash = bytes.md5()
-                            if (isUnknownHash(fileBytesHash)) {
-                                val dir = file.parentFile
-                                if (!dir.exists()) {
-                                    dir.mkdirs()
-                                }
-                                file.writeBytes(bytes)
-                                ImageChangedEventBus.emitEvent(file)
-                                registerHash(fileBytesHash, digest)
-                                log.info { "$file saved".paintGreen() }
-                            }
+                            writeFile(file, bytes, fileBytesHash, digest)
                         }
                     }
                 }

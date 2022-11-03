@@ -1,6 +1,6 @@
 package io.spixy.imageaggregator.web
 
-import io.spixy.imageaggregator.ImageChangedEventBus
+import io.spixy.imageaggregator.NewImageEventBus
 import io.spixy.imageaggregator.ImagePaths
 import io.spixy.imageaggregator.hasImageExtension
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +30,7 @@ class ImageScreenOutService(coroutineScope: CoroutineScope) {
 
     init {
         coroutineScope.launch {
-            ImageChangedEventBus.events
+            NewImageEventBus.events
                 .filter { it.toPath().normalize().startsWith(ImagePaths.DOWNLOAD_DIR) }
                 .collect { file ->
                     images.add(file)
@@ -48,7 +48,7 @@ class ImageScreenOutService(coroutineScope: CoroutineScope) {
                     log.warn { "$newPath already exists. overwriting..." }
                 }
                 Files.move(currentImage.toPath(), newPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                ImageChangedEventBus.emitEvent(newPath)
+                NewImageEventBus.emitEvent(newPath)
                 images.remove(currentImage)
             } else {
                 log.warn { "Image $currentImage not exists" }
@@ -67,7 +67,7 @@ class ImageScreenOutService(coroutineScope: CoroutineScope) {
                     log.warn { "$newPath already exists. overwriting..." }
                 }
                 Files.move(currentImage.toPath(), newPath.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                ImageChangedEventBus.emitEvent(newPath)
+                NewImageEventBus.emitEvent(newPath)
                 images.remove(currentImage)
             } else {
                 log.warn { "Image $currentImage not exists" }

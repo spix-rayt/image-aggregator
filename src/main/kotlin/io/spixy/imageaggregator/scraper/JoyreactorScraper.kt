@@ -68,48 +68,43 @@ class JoyreactorScraper(private val config: Config.Joyreactor): Scraper() {
                     post.attributes
                         .filter { it.image.type == ImageType.JPEG }
                         .forEach { attribute ->
-                            if (attribute.type == AttributeType.PICTURE) {
-                                val fileName = extractFileName(post, attribute)
-
-                                if(isUnknownHash(fileName.md5())) {
-                                    RunnableRandomQueue.run {
-                                        val url1 = "https://img10.joyreactor.cc/pics/post/full/$fileName"
-                                        val url2 = "https://img10.joyreactor.cc/pics/post/$fileName"
-                                        var bytes: ByteArray? = null
-                                        var retriesLeft = 3
-                                        while (retriesLeft > 0) {
-                                            try {
-                                                retriesLeft -= 1
-                                                bytes = httpClient.downloadImage(url1)
-                                                if (bytes == null) {
-                                                    bytes = httpClient.downloadImage(url2)
-                                                }
-                                                retriesLeft = 0
-                                            } catch (e: IOException) {
-                                                log.error(e) { "download error. retriesLeft = $retriesLeft" }
-                                                delay(30.seconds)
-                                            }
-                                        }
-
-                                        if (bytes != null) {
-                                            val file = File("images/download/joyreactor/${escapeTag(tag)}/$fileName")
-                                            bytes = removeBottomJoyreactorLine(bytes, file.extension)
-                                            val fileBytesHash = bytes.md5()
-                                            if (isUnknownHash(fileBytesHash)) {
-                                                val dir = file.parentFile
-                                                if (!dir.exists()) {
-                                                    dir.mkdirs()
-                                                }
-                                                file.writeBytes(bytes)
-                                                ImageChangedEventBus.emitEvent(file)
-                                                registerHash(fileBytesHash, fileName.md5())
-                                                log.info { "$file saved".paintGreen() }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            processAttribute(attribute, post, tag)
                         }
+        }
+    }
+
+    private fun processAttribute(attribute: Attribute, post: Post, tag: String) {
+        if (attribute.type == AttributeType.PICTURE) {
+            val fileName = extractFileName(post, attribute)
+
+            if (isUnknownHash(fileName.md5())) {
+                RunnableRandomQueue.run {
+                    val url1 = "https://img10.joyreactor.cc/pics/post/full/$fileName"
+                    val url2 = "https://img10.joyreactor.cc/pics/post/$fileName"
+                    var bytes: ByteArray? = null
+                    var retriesLeft = 3
+                    while (retriesLeft > 0) {
+                        try {
+                            retriesLeft -= 1
+                            bytes = httpClient.downloadImage(url1)
+                            if (bytes == null) {
+                                bytes = httpClient.downloadImage(url2)
+                            }
+                            retriesLeft = 0
+                        } catch (e: IOException) {
+                            log.error(e) { "download error. retriesLeft = $retriesLeft" }
+                            delay(30.seconds)
+                        }
+                    }
+
+                    if (bytes != null) {
+                        val file = File("images/download/joyreactor/${escapeTag(tag)}/$fileName")
+                        bytes = removeBottomJoyreactorLine(bytes, file.extension)
+                        val fileBytesHash = bytes.md5()
+                        writeFile(file, bytes, fileBytesHash, fileName.md5())
+                    }
+                }
+            }
         }
     }
 

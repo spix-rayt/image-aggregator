@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import java.io.File
 
-object ImageChangedEventBus {
+object NewImageEventBus {
     private val mutableSharedFlow = MutableSharedFlow<File>(replay = 100)
     val events = mutableSharedFlow.asSharedFlow()
 

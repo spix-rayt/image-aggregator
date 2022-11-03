@@ -1,6 +1,9 @@
 package io.spixy.imageaggregator.scraper
 
+import io.spixy.imageaggregator.NewImageEventBus
+import io.spixy.imageaggregator.hasImageExtension
 import io.spixy.imageaggregator.isMd5Hash
+import io.spixy.imageaggregator.paintGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
@@ -12,7 +15,7 @@ private val log = KotlinLogging.logger {}
 
 abstract class Scraper {
     companion object {
-        private val downloadedFile = File("images/download/downloaded.txt").also {
+        private val knownHashesFile = File("images/download/known_hashes.txt").also {
             if(!it.exists()) {
                 it.parentFile.mkdirs()
                 it.createNewFile()
@@ -21,25 +24,17 @@ abstract class Scraper {
         private val hashes = mutableSetOf<String>()
 
         init {
-            downloadedFile.readLines().forEach { line ->
+            knownHashesFile.readLines().forEach { line ->
                 if(line.isMd5Hash()) {
                     hashes.add(line)
                 } else {
-                    log.warn { "invalid line in $downloadedFile - $line" }
+                    log.warn { "invalid line in $knownHashesFile - $line" }
                 }
                 hashes.add(line)
             }
         }
 
         fun isUnknownHash(hash: String) = !hashes.contains(hash)
-
-        fun registerHash(hash1: String, hash2: String) {
-            check(hash1.isMd5Hash()) { "$hash1 is not md5 hash" }
-            check(hash2.isMd5Hash()) { "$hash2 is not md5 hash" }
-            hashes.add(hash1)
-            hashes.add(hash2)
-            downloadedFile.appendText("$hash1\n$hash2\n")
-        }
 
         suspend fun OkHttpClient.downloadImage(url: String): ByteArray? = withContext(Dispatchers.IO) {
             log.info { "download $url" }
@@ -54,6 +49,37 @@ abstract class Scraper {
                     null
                 }
             }
+        }
+
+        suspend fun writeFile(file: File, bytes: ByteArray, fileBytesHash: String, digest: String) {
+            if (isUnknownHash(fileBytesHash)) {
+                if (file.exists()) {
+                    error("$file already exists")
+                }
+                if (file.hasImageExtension()) {
+                    file.parentFile.mkdirs()
+                    file.writeBytes(bytes)
+                    NewImageEventBus.emitEvent(file)
+                    registerHash(fileBytesHash, digest)
+                    log.info { "$file saved".paintGreen() }
+                }
+            } else {
+                registerHash(digest)
+            }
+        }
+
+        private fun registerHash(hash: String) {
+            check(hash.isMd5Hash()) { "$hash is not md5 hash" }
+            hashes.add(hash)
+            knownHashesFile.appendText("$hash\n")
+        }
+
+        private fun registerHash(hash1: String, hash2: String) {
+            check(hash1.isMd5Hash()) { "$hash1 is not md5 hash" }
+            check(hash2.isMd5Hash()) { "$hash2 is not md5 hash" }
+            hashes.add(hash1)
+            hashes.add(hash2)
+            knownHashesFile.appendText("$hash1\n$hash2\n")
         }
     }
 }

@@ -39,7 +39,7 @@ class ImagesBattleService(coroutineScope: CoroutineScope) {
 
     init {
         coroutineScope.launch {
-            ImageChangedEventBus.events
+            NewImageEventBus.events
                 .filter { it.toPath().normalize().startsWith(ImagePaths.PASS_DIR) }
                 .collect { file ->
                     images.add(Image(file))

@@ -71,20 +71,9 @@ class VKScraper(private val config: Config.VK) : Scraper() {
                         val bytes = httpClient.downloadImage(photo.url)
                         if (bytes != null) {
                             val fileBytesHash = bytes.md5()
-                            if (isUnknownHash(fileBytesHash)) {
-                                val fileName = photo.url.split("?").first().split("/").last()
-                                val file = File("images/download/vk/$club/$fileName")
-                                if (file.exists()) {
-                                    error("$file already exists")
-                                }
-                                if (file.hasImageExtension()) {
-                                    file.parentFile.mkdirs()
-                                    file.writeBytes(bytes)
-                                    ImageChangedEventBus.emitEvent(file)
-                                    registerHash(fileBytesHash, digest)
-                                    log.info { "$file saved".paintGreen() }
-                                }
-                            }
+                            val fileName = photo.url.split("?").first().split("/").last()
+                            val file = File("images/download/vk/$club/$fileName")
+                            writeFile(file, bytes, fileBytesHash, digest)
                         }
                     }
                 }
