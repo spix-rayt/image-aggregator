@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Image Aggregator</title>
+</head>
+<body>
+<div style="font-size: 16pt; font-style: italic; position: absolute; width: 98vw; left: 1vw; right: 1vw; text-align: center; top: 0;">{{dist}}</div>
+<div style="font-size: 14pt; font-style: italic; position: absolute; top: 0; right: 65vw; ">{{left.width}}x{{left.height}}</div>
+<div style="font-size: 14pt; font-style: italic; position: absolute; top: 0; left: 65vw; ">{{right.width}}x{{right.height}}</div>
+<div id="split-view">
+    <div id="zoomed" style="white-space: nowrap; cursor: zoom-out; display: none; text-align: center;">
+        <img src="{{ left.src }}" style="vertical-align: top;" alt="left picture">
+        <img src="{{ right.src }}" style="vertical-align: top;" alt="right picture">
+    </div>
+    <div id="unzoomed" style="white-space: nowrap; cursor: zoom-in;">
+        <img src="{{ left.src }}" style="max-width: 47vw; max-height: 95vh; position: absolute; right: 51vw; top: 4vh;" alt="left picture">
+        <img src="{{ right.src }}" style="max-width: 47vw; max-height: 95vh; position: absolute; left: 51vw; top: 4vh;" alt="right picture">
+    </div>
+</div>
+<div id="combined-view" style="display: none; position: absolute; width: 99vw; text-align: center; ">
+    <img src="{{ left.src }}" style="height: 95vh; position: absolute; left: 0; right: 0; top: 4vh; margin-left: auto; margin-right: auto;" alt="left picture">
+    <img id="combined-right-img" src="{{ right.src }}" style="height: 95vh; position: absolute; left: 0; right: 0; top: 4vh; margin-left: auto; margin-right: auto;" alt="right picture">
+</div>
+
+<script>
+    let splitViewDiv = document.getElementById("split-view");
+    let combinedViewDiv = document.getElementById("combined-view");
+    let combinedRightImg = document.getElementById("combined-right-img");
+
+    window.onkeydown = (e) => {
+        if(e.key === "ArrowLeft") {
+            window.location.replace('/similars/deleteRight');
+        }
+        if(e.key === "ArrowRight") {
+            window.location.replace('/similars/deleteLeft');
+        }
+        if(e.key === " ") {
+            window.location.replace('/similars/skip')
+        }
+        if(e.key === "Delete") {
+            window.location.replace('/similars/deleteBoth');
+        }
+        if(e.key === "PageUp") {
+            splitViewDiv.style.display = "none";
+            combinedViewDiv.style.display = "block";
+            combinedRightImg.style.zIndex = "-1";
+        }
+        if(e.key === "PageDown") {
+            splitViewDiv.style.display = "none";
+            combinedViewDiv.style.display = "block";
+            combinedRightImg.style.zIndex = "1";
+        }
+        if(e.key === "Home") {
+            splitViewDiv.style.display = "block";
+            combinedViewDiv.style.display = "none";
+        }
+    };
+
+    let zoomedDiv = document.getElementById("zoomed");
+    let unzoomedDiv = document.getElementById("unzoomed");
+
+    unzoomedDiv.onclick = (e) => {
+        unzoomedDiv.style.display = "none";
+        zoomedDiv.style.display = "block";
+    }
+
+    zoomedDiv.onclick = (e) => {
+        zoomedDiv.style.display = "none";
+        unzoomedDiv.style.display = "block";
+    }
+</script>
+</body>
+</html>

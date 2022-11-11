@@ -2,6 +2,7 @@ package io.spixy.imageaggregator.web
 
 import io.spixy.imageaggregator.NewImageEventBus
 import io.spixy.imageaggregator.ImagePaths
+import io.spixy.imageaggregator.rebasePath
 import io.spixy.imageaggregator.hasImageExtension
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filter
@@ -40,7 +41,7 @@ class ImageScreenOutService(coroutineScope: CoroutineScope) {
 
     suspend fun passAndGoNext() {
         currentImage?.let { currentImage ->
-            val newPath = buildNewImageDir(currentImage, ImagePaths.PASS_DIR.name)
+            val newPath = rebasePath(ImagePaths.DOWNLOAD_DIR, ImagePaths.PASS_DIR, currentImage)
             newPath.parentFile.mkdirs()
             if(currentImage.exists()) {
                 log.info { "Move image $currentImage to $newPath" }
@@ -59,7 +60,7 @@ class ImageScreenOutService(coroutineScope: CoroutineScope) {
 
     suspend fun delete() {
         currentImage?.let { currentImage ->
-            val newPath = buildNewImageDir(currentImage, ImagePaths.TRASH_DIR.name)
+            val newPath = rebasePath(ImagePaths.DOWNLOAD_DIR, ImagePaths.TRASH_DIR, currentImage)
             newPath.parentFile.mkdirs()
             if(currentImage.exists()) {
                 log.info { "Move image $currentImage to $newPath" }
@@ -74,21 +75,5 @@ class ImageScreenOutService(coroutineScope: CoroutineScope) {
             }
         }
         currentImage = images.randomOrNull()
-    }
-
-    private fun buildNewImageDir(img: File, dir: String): File {
-        val root = File("images")
-        var x = img
-        val path = mutableListOf<String>()
-        while (x != root) {
-            path.add(0, x.name)
-            x = x.parentFile
-        }
-        check(path[0] == ImagePaths.DOWNLOAD_DIR.name)
-        path[0] = dir
-        while (path.isNotEmpty()) {
-            x = File(x, path.removeFirst())
-        }
-        return x
     }
 }

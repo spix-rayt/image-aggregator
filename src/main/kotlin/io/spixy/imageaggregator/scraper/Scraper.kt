@@ -1,9 +1,6 @@
 package io.spixy.imageaggregator.scraper
 
-import io.spixy.imageaggregator.NewImageEventBus
-import io.spixy.imageaggregator.hasImageExtension
-import io.spixy.imageaggregator.isMd5Hash
-import io.spixy.imageaggregator.paintGreen
+import io.spixy.imageaggregator.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mu.KotlinLogging
@@ -15,20 +12,15 @@ private val log = KotlinLogging.logger {}
 
 abstract class Scraper {
     companion object {
-        private val knownHashesFile = File("images/download/known_hashes.txt").also {
-            if(!it.exists()) {
-                it.parentFile.mkdirs()
-                it.createNewFile()
-            }
-        }
+        private val knownHashesDataFile = File("data/known_hashes.txt").alsoCreateIfNotExists()
         private val hashes = mutableSetOf<String>()
 
         init {
-            knownHashesFile.readLines().forEach { line ->
+            knownHashesDataFile.readLines().forEach { line ->
                 if(line.isMd5Hash()) {
                     hashes.add(line)
                 } else {
-                    log.warn { "invalid line in $knownHashesFile - $line" }
+                    log.warn { "invalid line in $knownHashesDataFile - $line" }
                 }
                 hashes.add(line)
             }
@@ -71,7 +63,7 @@ abstract class Scraper {
         private fun registerHash(hash: String) {
             check(hash.isMd5Hash()) { "$hash is not md5 hash" }
             hashes.add(hash)
-            knownHashesFile.appendText("$hash\n")
+            knownHashesDataFile.appendText("$hash\n")
         }
 
         private fun registerHash(hash1: String, hash2: String) {
@@ -79,7 +71,7 @@ abstract class Scraper {
             check(hash2.isMd5Hash()) { "$hash2 is not md5 hash" }
             hashes.add(hash1)
             hashes.add(hash2)
-            knownHashesFile.appendText("$hash1\n$hash2\n")
+            knownHashesDataFile.appendText("$hash1\n$hash2\n")
         }
     }
 }

@@ -43,6 +43,14 @@ fun File.isChildOf(dir: Path): Boolean {
     return this.toPath().normalize().startsWith(dir.normalize())
 }
 
+fun File.alsoCreateIfNotExists(): File {
+    if(!this.exists()) {
+        parentFile.mkdirs()
+        createNewFile()
+    }
+    return this
+}
+
 fun formatSize(v: Long): String {
     if (v < 1024) return "$v B"
     val z = (63 - java.lang.Long.numberOfLeadingZeros(v)) / 10
@@ -51,4 +59,36 @@ fun formatSize(v: Long): String {
 
 fun File.hasImageExtension(): Boolean {
     return this.extension == "jpg" || this.extension == "jpeg"
+}
+
+/**
+ * for example:
+ * oldBase = images/downloads
+ * newBase = images/pass
+ * file path should start with oldBase
+ * file = images/downloads/joyreactor/tagname/123.jpg
+ *
+ * then result will be images/pass/joyreactor/tagname/123.jpg
+ *
+ * it similar to "images/downloads/joyreactor/tagname/123.jpg".replace("images/downloads", "images/pass")
+ * but with path specific checks
+ */
+fun rebasePath(oldBase: Path, newBase: Path, file: File): File {
+    require(file.parentFile.isChildOf(oldBase))
+    var x = file
+    val path = mutableListOf<String>()
+    while (x.parentFile.isChildOf(oldBase)) {
+        path.add(0, x.name)
+        x = x.parentFile
+    }
+    var result = newBase.toFile()
+    while (path.isNotEmpty()) {
+        result = File(result, path.removeFirst())
+    }
+    return result
+}
+
+fun rebasePathWithOldBaseAutodetect(possibleOldBases: List<Path>, newBase: Path, file: File): File {
+    val oldBase = possibleOldBases.first { file.isChildOf(it) }
+    return rebasePath(oldBase, newBase, file)
 }

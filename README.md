@@ -1,12 +1,31 @@
-# image-aggregator
+# Image Aggregator
 Background process which download new images from VK, Reddit and Joyreactor
 
 ## Web UI pages
 
-**Screening out images** - watch random image and select save or delete  
-**Images battle** - watch two random images and select which better  
-**Top 50 images** - list of best images based on image battle  
-**Metrics** - Count and size of images  
+1. **Find similar images** - service slowly analyze all images from download and pass directories.   
+Then you can find similar images, and select which image should be saved or deleted.  
+   Keymap:
+    - **←** - save left side image and delete* right side image
+    - **→** - save right side image and delete* left side image
+    - **DEL** - delete* both images
+    - **SPACE** - save both images
+    - **PAGE UP** - switch to combined view and show left image
+    - **PAGE DOWN** - switch to combined view and show right image
+    - **HOME** - switch to split view
+2. **Screening out images** - watch random image and select save or delete  
+   Keymap:
+   - **→** - save image
+   - **DEL** - delete* image
+3. **Images battle** - watch two random images and select which is better  
+   Keymap:
+   - **←** - mark left image is better than right image
+   - **→** - mark right image is better than left image
+   - **SPACE** - skip this pair of images. it will be shown later
+4. **Top 50 images** - list of best images based on image battle  
+5. **Metrics** - Count and size of images  
+
+\* Delete - instead of deleting image file service always moves it to image/trash directory
 
 
 ## config.yml - create this file before run app
@@ -24,13 +43,13 @@ joyreactor:
 
 # Reddit settings
 reddit:
-  # Personal use script application (https://www.reddit.com/prefs/apps)
-  # Username = App ID
-  # Password = App secret
+  # "Personal use script" application (https://www.reddit.com/prefs/apps)
+  # Username = Your app ID
+  # Password = Your app secret
   appCredentials:
     username: R8pq0J2v_yw7Hou61X64Qg
     password: G0TncQ3Ui5A72A1UfORs0hdBbaW8cn
-  # Reddit user login and password
+  # Reddit your user account login and password
   userCredentials:
     username: AverageImageCollectingEnjoyer
     password: eW91YXJlaGFja2VyPz8/
@@ -40,7 +59,7 @@ reddit:
     - EarthPorn
 # VK settings
 vk:
-  # VK access_token
+  # VK access_token of your app
   accessToken: vk1.a.qSH83n9brASpirkdw4heaYBOi4UhOaBuuS0nxNveVIsOBJEaNOwdUbDTyTn2GnLRyxZ3PpMKEP2H-7qpvPr3eJXCR4VNlt3tDozB2yHSxFT72h-zJrevSexdx-ABZgyoxyBHIjIZVFHw4QIVB2g4lKJiglnV2eWJoRKboXEnC5jGvI4am9hKqklW6r6mcK9s8cd-zZgrWr4GoueZ5F2vWA
   # VK clubs list for download jpegs
   clubs:
@@ -56,3 +75,4 @@ vk:
 - Telegram
 - ☑ Web interface
 - Image organizer
+- ☑ Similar images finder

@@ -18,14 +18,9 @@ class ImagesBattleService(coroutineScope: CoroutineScope) {
         .map { Image(it) }
         .toMutableList()
     private var currentImages: LeftAndRightImage? = null
-    private val comparisonsFile = File(ImagePaths.PASS_DIR.toFile(), "comparisons.txt").also {
-        if(!it.exists()) {
-            it.parentFile.mkdirs()
-            it.createNewFile()
-        }
-    }
+    private val comparisonsDataFile = File("data/comparisons.txt").alsoCreateIfNotExists()
 
-    private val recordedComparisons = comparisonsFile.readLines().mapNotNull { line ->
+    private val recordedComparisons = comparisonsDataFile.readLines().mapNotNull { line ->
         val split = line.split(" ")
         val leftImg = images.find { it.hash == split[0] }
         val rightImg = images.find { it.hash == split[2] }
@@ -56,7 +51,7 @@ class ImagesBattleService(coroutineScope: CoroutineScope) {
 
     fun leftBetter() {
         currentImages?.let { currentImages ->
-            comparisonsFile.appendText("${currentImages.left.hash} > ${currentImages.right.hash}\n")
+            comparisonsDataFile.appendText("${currentImages.left.hash} > ${currentImages.right.hash}\n")
             recordedComparisons.add(RecordedComparison(currentImages.left, currentImages.right, ComparisonResult.LEFT))
         }
         setNextCurrentImage()
@@ -64,7 +59,7 @@ class ImagesBattleService(coroutineScope: CoroutineScope) {
 
     fun rightBetter() {
         currentImages?.let { currentImages ->
-            comparisonsFile.appendText("${currentImages.left.hash} < ${currentImages.right.hash}\n")
+            comparisonsDataFile.appendText("${currentImages.left.hash} < ${currentImages.right.hash}\n")
             recordedComparisons.add(RecordedComparison(currentImages.left, currentImages.right, ComparisonResult.RIGHT))
         }
         setNextCurrentImage()
@@ -146,25 +141,25 @@ class ImagesBattleService(coroutineScope: CoroutineScope) {
         currentImages = null
         return null
     }
-}
 
-data class LeftAndRightImage(val left: Image, val right: Image)
+    class LeftAndRightImage(val left: Image, val right: Image)
 
-data class Image(val file: File, var rating: Double = 0.0) {
-    val hash = file.md5()
-}
+    class Image(val file: File, var rating: Double = 0.0) {
+        val hash = file.md5()
+    }
 
-data class RecordedComparison(val left: Image, val right: Image, val result: ComparisonResult)
+    class RecordedComparison(val left: Image, val right: Image, val result: ComparisonResult)
 
-enum class ComparisonResult {
-    LEFT, RIGHT;
+    enum class ComparisonResult {
+        LEFT, RIGHT;
 
-    companion object {
-        fun fromSign(str: String): ComparisonResult {
-            return when(str) {
-                ">" -> LEFT
-                "<" -> RIGHT
-                else -> error("unknown sign $str")
+        companion object {
+            fun fromSign(str: String): ComparisonResult {
+                return when(str) {
+                    ">" -> LEFT
+                    "<" -> RIGHT
+                    else -> error("unknown sign $str")
+                }
             }
         }
     }

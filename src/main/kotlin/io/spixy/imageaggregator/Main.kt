@@ -5,6 +5,7 @@ import com.charleskorn.kaml.decodeFromStream
 import io.spixy.imageaggregator.scraper.JoyreactorScraper
 import io.spixy.imageaggregator.scraper.RedditScraper
 import io.spixy.imageaggregator.scraper.VKScraper
+import io.spixy.imageaggregator.web.ImageDeduplicationService
 import io.spixy.imageaggregator.web.WebUIController
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
@@ -19,6 +20,7 @@ fun main() {
         config.reddit?.let { RedditScraper(it).start(this) }
         config.vk?.let { VKScraper(it).start(this) }
         RunnableRandomQueue.start(this)
+        ImageDeduplicationService.start(this)
         WebUIController(config.webUi).start(this)
     }
     log.info { "App closed" }

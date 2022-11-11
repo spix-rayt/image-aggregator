@@ -39,7 +39,7 @@ class WebUIController(private val config: Config.WebUI) {
                                 "img" to Img("/${currentImage.toPath()}")
                             )
                             render("screen_out.hbs", model)
-                        } ?: render("no_images.hbs")
+                        } ?: renderMessage("No Images")
                         call.respond(content)
                     } catch (e: Exception) {
                         logger.error(e) { }
@@ -72,7 +72,7 @@ class WebUIController(private val config: Config.WebUI) {
                                 "right" to Img("/${current.right.file.toPath()}")
                             )
                             render("battle.hbs", model)
-                        } ?: render("no_images.hbs")
+                        } ?: renderMessage("No Images")
                         call.respond(content)
                     } catch (e: Exception) {
                         logger.error(e) { }
@@ -113,6 +113,60 @@ class WebUIController(private val config: Config.WebUI) {
                             "images" to images.map { Img("/${it.file.toPath()}", it.rating.roundToLong()) }
                         )
                         call.respond(render("top.hbs", model))
+                    } catch (e: Exception) {
+                        logger.error(e) { }
+                    }
+                }
+
+                get("/similars") {
+                    try {
+                        val current = ImageDeduplicationService.getCurrent()
+                        if(current == null) {
+                            call.respond(renderMessage("no similar images found"))
+                            return@get
+                        }
+                        val model = mapOf(
+                            "dist" to current.dist,
+                            "left" to Img("/${current.left.file.toPath()}", width = current.left.width, height =  current.left.height),
+                            "right" to Img("/${current.right.file.toPath()}", width = current.right.width, height =  current.right.height)
+                        )
+                        call.respond(render("similars.hbs", model))
+                    } catch (e: Exception) {
+                        logger.error(e) { }
+                    }
+                }
+
+                get("/similars/deleteLeft") {
+                    try {
+                        ImageDeduplicationService.deleteLeftAndNext()
+                        call.respondRedirect("/similars")
+                    } catch (e: Exception) {
+                        logger.error(e) { }
+                    }
+                }
+
+                get("/similars/deleteRight") {
+                    try {
+                        ImageDeduplicationService.deleteRightAndNext()
+                        call.respondRedirect("/similars")
+                    } catch (e: Exception) {
+                        logger.error(e) { }
+                    }
+                }
+
+                get("/similars/skip") {
+                    try {
+                        ImageDeduplicationService.skipAndNext()
+                        call.respondRedirect("/similars")
+                    } catch (e: Exception) {
+                        logger.error(e) { }
+                    }
+                }
+
+                get("/similars/deleteBoth") {
+                    try {
+                        ImageDeduplicationService.deleteBothAndNext()
+                        call.respondRedirect("/similars")
                     } catch (e: Exception) {
                         logger.error(e) { }
                     }
@@ -248,6 +302,10 @@ class WebUIController(private val config: Config.WebUI) {
         logger.info { "WebUI server started".paintGreen() }
     }
 
+    private fun renderMessage(msg: String): MustacheContent {
+        return render("message.hbs", mapOf("message" to msg))
+    }
+
     private fun render(template: String, model: Map<String, Any?>): MustacheContent {
         return MustacheContent(template, model)
     }
@@ -256,5 +314,5 @@ class WebUIController(private val config: Config.WebUI) {
         return MustacheContent(template, mapOf("" to ""))
     }
 
-    data class Img(val src: String, val rating: Long = 0)
+    data class Img(val src: String, val rating: Long = 0, val width: Int = 0, val height: Int = 0)
 }
