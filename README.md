@@ -36,7 +36,7 @@ webUi:
   port: 8080
 
 
-# Joyreactor settings
+# Joyreactor settings example
 joyreactor:
   # Tags list for download jpegs
   tags:
@@ -44,7 +44,7 @@ joyreactor:
     - Overwatch
 
 
-# Reddit settings
+# Reddit settings example
 reddit:
   # "Personal use script" application (https://www.reddit.com/prefs/apps)
   # Username = Your app ID
@@ -62,7 +62,7 @@ reddit:
     - EarthPorn
 
 
-# VK settings
+# VK settings example
 vk:
   # VK access_token of your app
   accessToken: vk1.a.qSH83n9brASpirkdw4heaYBOi4UhOaBuuS0nxNveVIsOBJEaNOwdUbDTyTn2GnLRyxZ3PpMKEP2H-7qpvPr3eJXCR4VNlt3tDozB2yHSxFT72h-zJrevSexdx-ABZgyoxyBHIjIZVFHw4QIVB2g4lKJiglnV2eWJoRKboXEnC5jGvI4am9hKqklW6r6mcK9s8cd-zZgrWr4GoueZ5F2vWA
@@ -71,7 +71,7 @@ vk:
     - art.photography
     - esthe
 
-# Telegram settings. Experimental. Only linux_64.
+# Telegram settings example
 telegram:
   # Your phone number for sign in telegram account
   phone: +380399958165
