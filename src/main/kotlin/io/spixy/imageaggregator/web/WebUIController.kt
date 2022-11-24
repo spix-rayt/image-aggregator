@@ -9,15 +9,17 @@ import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.spixy.imageaggregator.*
+import io.spixy.imageaggregator.scraper.TelegramScraper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import mu.KotlinLogging
 import java.io.File
+import java.lang.StringBuilder
 import kotlin.math.roundToLong
 
 private val logger = KotlinLogging.logger {}
 
-class WebUIController(private val config: Config.WebUI) {
+class WebUIController(private val config: Config.WebUI, val telegramScraper: TelegramScraper? = null) {
     suspend fun start(coroutineScope: CoroutineScope) = coroutineScope.launch {
         val imageScreenOutService = ImageScreenOutService(coroutineScope)
         val imagesBattleService = ImagesBattleService(coroutineScope)
@@ -120,15 +122,21 @@ class WebUIController(private val config: Config.WebUI) {
 
                 get("/similars") {
                     try {
-                        val current = ImageDeduplicationService.getCurrent()
+                        val current = ImageSimilarityService.getCurrent()
                         if(current == null) {
                             call.respond(renderMessage("no similar images found"))
                             return@get
                         }
                         val model = mapOf(
                             "dist" to current.dist,
-                            "left" to Img("/${current.left.file.toPath()}", width = current.left.width, height =  current.left.height),
-                            "right" to Img("/${current.right.file.toPath()}", width = current.right.width, height =  current.right.height)
+                            "left" to Img("/${current.left.file.toPath()}",
+                                width = current.left.width,
+                                height =  current.left.height,
+                                size = formatSize(current.left.size)),
+                            "right" to Img("/${current.right.file.toPath()}",
+                                width = current.right.width,
+                                height =  current.right.height,
+                                size = formatSize(current.right.size))
                         )
                         call.respond(render("similars.hbs", model))
                     } catch (e: Exception) {
@@ -138,7 +146,7 @@ class WebUIController(private val config: Config.WebUI) {
 
                 get("/similars/deleteLeft") {
                     try {
-                        ImageDeduplicationService.deleteLeftAndNext()
+                        ImageSimilarityService.deleteLeftAndNext()
                         call.respondRedirect("/similars")
                     } catch (e: Exception) {
                         logger.error(e) { }
@@ -147,7 +155,7 @@ class WebUIController(private val config: Config.WebUI) {
 
                 get("/similars/deleteRight") {
                     try {
-                        ImageDeduplicationService.deleteRightAndNext()
+                        ImageSimilarityService.deleteRightAndNext()
                         call.respondRedirect("/similars")
                     } catch (e: Exception) {
                         logger.error(e) { }
@@ -156,7 +164,7 @@ class WebUIController(private val config: Config.WebUI) {
 
                 get("/similars/skip") {
                     try {
-                        ImageDeduplicationService.skipAndNext()
+                        ImageSimilarityService.skipAndNext()
                         call.respondRedirect("/similars")
                     } catch (e: Exception) {
                         logger.error(e) { }
@@ -165,7 +173,7 @@ class WebUIController(private val config: Config.WebUI) {
 
                 get("/similars/deleteBoth") {
                     try {
-                        ImageDeduplicationService.deleteBothAndNext()
+                        ImageSimilarityService.deleteBothAndNext()
                         call.respondRedirect("/similars")
                     } catch (e: Exception) {
                         logger.error(e) { }
@@ -268,25 +276,32 @@ class WebUIController(private val config: Config.WebUI) {
                         val bytesPerImage = totalImagesSize / totalImagesCount
                         val midianImageSize = imageSizes.apply { sort() }[imageSizes.size / 2]
 
-                        val content = """
-                            Total images not viewed: $totalImagesNotViewed
-                            Total images screen out (pass / deleted): $totalImagesPass / $totalImagesTrash
-                            
-                            
-                            Reddit images count: $redditImagesCount
-                            Joyreactor images count: $joyreactorImagesCount
-                            VK images count: $vkImagesCount
-                            Total images count: $totalImagesCount
-                            
-                            Reddit images size: ${formatSize(redditImagesSize)}
-                            Joyreactor images size: ${formatSize(joyreactorImagesSize)}
-                            VK images size: ${formatSize(vkImagesSize)}
-                            Total images size: ${formatSize(totalImagesSize)}
-                            
-                            Average image size: ${formatSize(bytesPerImage)}
-                            Median image size: ${formatSize(midianImageSize)}
-                        """.trimIndent()
-                        call.respond(content)
+                        val content = StringBuilder()
+                        content.appendLine("Total images not viewed: $totalImagesNotViewed")
+                        content.appendLine("Total images screen out (pass / deleted): $totalImagesPass / $totalImagesTrash")
+                        content.appendLine()
+                        content.appendLine()
+                        content.appendLine("Reddit images count: $redditImagesCount")
+                        content.appendLine("Joyreactor images count: $joyreactorImagesCount")
+                        content.appendLine("VK images count: $vkImagesCount")
+                        content.appendLine("Total images count: $totalImagesCount")
+                        content.appendLine()
+                        content.appendLine("Reddit images size: ${formatSize(redditImagesSize)}")
+                        content.appendLine("Joyreactor images size: ${formatSize(joyreactorImagesSize)}")
+                        content.appendLine("VK images size: ${formatSize(vkImagesSize)}")
+                        content.appendLine("Total images size: ${formatSize(totalImagesSize)}")
+                        content.appendLine()
+                        content.appendLine("Average image size: ${formatSize(bytesPerImage)}")
+                        content.appendLine("Median image size: ${formatSize(midianImageSize)}")
+                        content.appendLine()
+                        content.appendLine()
+                        if(telegramScraper != null) {
+                            content.appendLine("Telegram metrics:")
+                            telegramScraper.metrics().forEach {
+                                content.appendLine(it)
+                            }
+                        }
+                        call.respond(content.toString())
                     } catch (e: Exception) {
                         logger.error(e) { }
                     }
@@ -314,5 +329,5 @@ class WebUIController(private val config: Config.WebUI) {
         return MustacheContent(template, mapOf("" to ""))
     }
 
-    data class Img(val src: String, val rating: Long = 0, val width: Int = 0, val height: Int = 0)
+    data class Img(val src: String, val rating: Long = 0, val width: Int = 0, val height: Int = 0, val size: String = "")
 }

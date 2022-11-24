@@ -14,12 +14,15 @@
 <script>
     window.onkeydown = (e) => {
         if(e.key === "ArrowLeft") {
+            document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
             window.location.replace('/battle/leftWin');
         }
         if(e.key === "ArrowRight") {
+            document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
             window.location.replace('/battle/rightWin');
         }
         if(e.key === " ") {
+            document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
             window.location.replace('/battle/skip')
         }
     };

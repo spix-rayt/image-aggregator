@@ -1,16 +1,24 @@
 package io.spixy.imageaggregator.scraper
 
-import com.expediagroup.graphql.client.spring.GraphQLWebClient
-import io.spixy.imageaggregator.*
+import com.expediagroup.graphql.client.serializer.defaultGraphQLSerializer
+import com.expediagroup.graphql.client.types.GraphQLClientRequest
+import com.expediagroup.graphql.client.types.GraphQLClientResponse
+import io.spixy.imageaggregator.Config
+import io.spixy.imageaggregator.RunnableRandomQueue
 import io.spixy.imageaggregator.generated.FetchImagesByTag
 import io.spixy.imageaggregator.generated.GetCountImagesByTag
 import io.spixy.imageaggregator.generated.enums.AttributeType
 import io.spixy.imageaggregator.generated.enums.ImageType
 import io.spixy.imageaggregator.generated.fetchimagesbytag.Attribute
 import io.spixy.imageaggregator.generated.fetchimagesbytag.Post
+import io.spixy.imageaggregator.md5
+import io.spixy.imageaggregator.paintGreen
 import kotlinx.coroutines.*
 import mu.KotlinLogging
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.apache.commons.codec.binary.Base64
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -25,24 +33,22 @@ import kotlin.time.Duration.Companion.seconds
 
 private val log = KotlinLogging.logger {}
 
-class JoyreactorScraper(private val config: Config.Joyreactor): Scraper() {
+class JoyreactorScraper(private val config: Config.Joyreactor): RestScraper() {
     private val httpClient = OkHttpClient.Builder().build()
     private val regex = Regex("[ ./?#]|\\s")
-
-    private val client = GraphQLWebClient("https://api.joyreactor.cc/graphql")
+    private val serializer = defaultGraphQLSerializer()
 
     suspend fun start(coroutineScope: CoroutineScope) = coroutineScope.launch {
         log.info { "JoyreactorScrapper started".paintGreen() }
 
         while (true) {
-            config.tags.shuffled().forEach { tag ->
-                try {
+            try {
+                config.tags.shuffled().forEach { tag ->
                     scrapTag(tag)
                     delay(5.seconds)
-                } catch (e: UnknownHostException) {
-                    log.error(e) {  }
-                    delay(1.minutes)
                 }
+            } catch (e: Exception) {
+                log.error(e) {  }
             }
             delay(1.hours)
         }
@@ -51,15 +57,13 @@ class JoyreactorScraper(private val config: Config.Joyreactor): Scraper() {
     private suspend fun scrapTag(tag: String) {
         log.info { "fetching images by tag $tag" }
         val postsCount = withContext(Dispatchers.IO) {
-            client.execute(GetCountImagesByTag(GetCountImagesByTag.Variables(tag)))
-        }
-            .data?.tag?.postPager?.count
-            ?: 0.also { log.warn { "Can't get count posts for tag $tag" } }
+            execute(GetCountImagesByTag(GetCountImagesByTag.Variables(tag)))
+        }.data?.tag?.postPager?.count ?: 0.also { log.warn { "Can't get count posts for tag $tag" } }
 
         val lastPage = (postsCount - 1) / 10 + 1
 
         for(page in (lastPage - 4)..lastPage)
-            withContext(Dispatchers.IO) { client.execute(FetchImagesByTag(FetchImagesByTag.Variables(tag, page))) }
+            withContext(Dispatchers.IO) { execute(FetchImagesByTag(FetchImagesByTag.Variables(tag, page))) }
                 .data
                 ?.tag
                 ?.postPager
@@ -71,6 +75,22 @@ class JoyreactorScraper(private val config: Config.Joyreactor): Scraper() {
                             processAttribute(attribute, post, tag)
                         }
         }
+    }
+
+    private suspend fun <T : Any> execute(request: GraphQLClientRequest<T>): GraphQLClientResponse<T> {
+        val rawResult = withContext(Dispatchers.IO) {
+            httpClient.newCall(
+                Request.Builder()
+                    .url("https://api.joyreactor.cc/graphql")
+                    .header("Accept", "application/json; charset=utf-8")
+                    .post(serializer.serialize(request)
+                        .toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull()))
+                    .build()).execute().use { response ->
+                response.body?.string() ?: error("Joyreactor request returns no body")
+            }
+        }
+
+        return serializer.deserialize(rawResult, request.responseType())
     }
 
     private fun processAttribute(attribute: Attribute, post: Post, tag: String) {

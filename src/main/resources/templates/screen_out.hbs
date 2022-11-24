@@ -15,9 +15,11 @@
     <script>
         window.onkeydown = (e) => {
             if(e.key === "Delete") {
+                document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
                 window.location.replace('/screenOut/delete');
             }
             if(e.key === "ArrowRight") {
+                document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
                 window.location.replace('/screenOut/pass');
             }
         };

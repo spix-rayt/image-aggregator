@@ -9,8 +9,8 @@
 </head>
 <body>
 <div style="font-size: 16pt; font-style: italic; position: absolute; width: 98vw; left: 1vw; right: 1vw; text-align: center; top: 0;">{{dist}}</div>
-<div style="font-size: 14pt; font-style: italic; position: absolute; top: 0; right: 65vw; ">{{left.width}}x{{left.height}}</div>
-<div style="font-size: 14pt; font-style: italic; position: absolute; top: 0; left: 65vw; ">{{right.width}}x{{right.height}}</div>
+<div style="font-size: 14pt; font-style: italic; position: absolute; top: 0; right: 65vw; ">{{left.width}}x{{left.height}} ({{left.size}})</div>
+<div style="font-size: 14pt; font-style: italic; position: absolute; top: 0; left: 65vw; ">{{right.width}}x{{right.height}} ({{right.size}})</div>
 <div id="split-view">
     <div id="zoomed" style="white-space: nowrap; cursor: zoom-out; display: none; text-align: center;">
         <img src="{{ left.src }}" style="vertical-align: top;" alt="left picture">
@@ -33,15 +33,19 @@
 
     window.onkeydown = (e) => {
         if(e.key === "ArrowLeft") {
+            document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
             window.location.replace('/similars/deleteRight');
         }
         if(e.key === "ArrowRight") {
+            document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
             window.location.replace('/similars/deleteLeft');
         }
         if(e.key === " ") {
+            document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
             window.location.replace('/similars/skip')
         }
         if(e.key === "Delete") {
+            document.body.innerHTML = "<div style=\"text-align: center; margin-top: 20vh;\">Loading</div>";
             window.location.replace('/similars/deleteBoth');
         }
         if(e.key === "PageUp") {

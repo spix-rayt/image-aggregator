@@ -12,6 +12,7 @@ import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.lang.Exception
 import java.net.UnknownHostException
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -20,7 +21,7 @@ import kotlin.time.Duration.Companion.seconds
 private val log = KotlinLogging.logger {}
 private val allowedFileExtensions = setOf("jpg", "jpeg")
 
-class RedditScraper(private val config: Config.Reddit): Scraper() {
+class RedditScraper(private val config: Config.Reddit): RestScraper() {
     private val httpClient = OkHttpClient.Builder()
         .authenticator(Authenticator { _, response ->
             if(response.request.header("Authorization") != null) {
@@ -44,15 +45,16 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
         while (true) {
             val token = getToken()
             log.info { "Reddit token aquired" }
-            config.subreddits.shuffled().forEach { subreddit ->
-                try {
+
+            try {
+                config.subreddits.shuffled().forEach { subreddit ->
                     scrapSubreddit(subreddit, token)
                     delay(5.seconds)
-                } catch (e: UnknownHostException) {
-                    log.error(e) {  }
-                    delay(1.minutes)
                 }
+            } catch (e: Exception) {
+                log.error(e) {  }
             }
+
             delay(1.hours)
         }
     }
@@ -103,19 +105,24 @@ class RedditScraper(private val config: Config.Reddit): Scraper() {
         }
     }
 
-    private fun scrapSubreddit(subreddit: String, token: String) {
+    private suspend fun scrapSubreddit(subreddit: String, token: String) {
         log.info { "fetching images from subreddit $subreddit" }
-        val call = httpClient.newCall(
-            Request.Builder()
-                .url("https://oauth.reddit.com/r/$subreddit/top?limit=100&t=week")
-                .addHeader("Authorization", "Bearer $token")
-                .build()
-        )
 
-        call.execute().use { response ->
-            response.body?.string()?.let { json ->
-                saveRedditImages(json, 40)
+        val json = withContext(Dispatchers.IO) {
+            val call = httpClient.newCall(
+                Request.Builder()
+                    .url("https://oauth.reddit.com/r/$subreddit/top?limit=100&t=week")
+                    .addHeader("Authorization", "Bearer $token")
+                    .build()
+            )
+
+            call.execute().use { response ->
+                response.body?.string()
             }
+        }
+
+        if(json != null) {
+            saveRedditImages(json, 40)
         }
     }
 

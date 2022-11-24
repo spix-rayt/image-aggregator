@@ -10,6 +10,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.lang.Exception
 import java.net.UnknownHostException
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -17,7 +18,7 @@ import kotlin.time.Duration.Companion.seconds
 
 private val log = KotlinLogging.logger {}
 
-class VKScraper(private val config: Config.VK) : Scraper() {
+class VKScraper(private val config: Config.VK) : RestScraper() {
     private val httpClient = OkHttpClient.Builder().build()
 
     private val gson = Gson()
@@ -26,14 +27,13 @@ class VKScraper(private val config: Config.VK) : Scraper() {
         log.info { "VKScrapper started".paintGreen() }
 
         while (true) {
-            config.clubs.shuffled().forEach { club ->
-                try {
+            try {
+                config.clubs.shuffled().forEach { club ->
                     scrapClubWall(club)
                     delay(5.seconds)
-                } catch (e: UnknownHostException) {
-                    log.error(e) {  }
-                    delay(1.minutes)
                 }
+            } catch (e: Exception) {
+                log.error(e) {  }
             }
             delay(1.hours)
         }

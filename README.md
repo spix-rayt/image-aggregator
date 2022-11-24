@@ -34,12 +34,15 @@ Then you can find similar images, and select which image should be saved or dele
 webUi:
   # localhost port
   port: 8080
+
+
 # Joyreactor settings
 joyreactor:
   # Tags list for download jpegs
   tags:
     - Anime
     - Overwatch
+
 
 # Reddit settings
 reddit:
@@ -49,7 +52,7 @@ reddit:
   appCredentials:
     username: R8pq0J2v_yw7Hou61X64Qg
     password: G0TncQ3Ui5A72A1UfORs0hdBbaW8cn
-  # Reddit your user account login and password
+  # your user account login and password
   userCredentials:
     username: AverageImageCollectingEnjoyer
     password: eW91YXJlaGFja2VyPz8/
@@ -57,6 +60,8 @@ reddit:
   subreddits:
     - pics
     - EarthPorn
+
+
 # VK settings
 vk:
   # VK access_token of your app
@@ -65,14 +70,31 @@ vk:
   clubs:
     - art.photography
     - esthe
+
+# Telegram settings. Experimental. Only linux_64.
+telegram:
+  # Your phone number for sign in telegram account
+  phone: +380399958165
+  # Telegram internal chat IDs
+  chatIds:
+    - -123
+    - -456
 ```
 
 ## Roadmap
 
-- ☑ Reddit
-- ☑ Joyreactor
-- ☑ Vkontakte
-- Telegram
-- ☑ Web interface
-- Image organizer
-- ☑ Similar images finder
+#### platforms
+- [x] Reddit <sup>_(Reddit API + OkHttp)_</sup>
+- [x] Joyreactor <sup>_(Joyreactor GraphQL API + GraphQL Kotlin + OkHttp)_</sup>
+- [x] Vkontakte <sup>_(VK API + OkHttp)_</sup>
+- [x] Telegram <sup>_(Experimental, only linux_64. TDLib + JNI)_</sup>
+  - [x] linux_64
+  - [ ] osx_64
+  - [ ] windows_64
+  - [ ] config rework
+  - [ ] log in rework
+
+#### tools
+- [x] Web interface
+- [x] Similar images finder
+- [ ] Image organizer

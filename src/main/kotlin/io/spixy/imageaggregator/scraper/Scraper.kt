@@ -1,12 +1,9 @@
 package io.spixy.imageaggregator.scraper
 
 import io.spixy.imageaggregator.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import mu.KotlinLogging
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
+import java.nio.file.Files
 
 private val log = KotlinLogging.logger {}
 
@@ -28,21 +25,6 @@ abstract class Scraper {
 
         fun isUnknownHash(hash: String) = !hashes.contains(hash)
 
-        suspend fun OkHttpClient.downloadImage(url: String): ByteArray? = withContext(Dispatchers.IO) {
-            log.info { "download $url" }
-            val call = this@downloadImage.newCall(
-                Request.Builder().url(url).build()
-            )
-
-            call.execute().use {
-                if (it.headers["Content-type"]?.startsWith("image") == true) {
-                    it.body?.bytes()
-                } else {
-                    null
-                }
-            }
-        }
-
         suspend fun writeFile(file: File, bytes: ByteArray, fileBytesHash: String, digest: String) {
             if (isUnknownHash(fileBytesHash)) {
                 if (file.exists()) {
@@ -54,6 +36,23 @@ abstract class Scraper {
                     NewImageEventBus.emitEvent(file)
                     registerHash(fileBytesHash, digest)
                     log.info { "$file saved".paintGreen() }
+                }
+            } else {
+                registerHash(digest)
+            }
+        }
+
+        suspend fun moveFile(src: File, dst: File, fileBytesHash: String, digest: String) {
+            if (isUnknownHash(fileBytesHash)) {
+                if(dst.exists()) {
+                    error("$dst already exists")
+                }
+                if(src.hasImageExtension()) {
+                    dst.parentFile.mkdirs()
+                    Files.move(src.toPath(), dst.toPath())
+                    NewImageEventBus.emitEvent(dst)
+                    registerHash(fileBytesHash, digest)
+                    log.info { "$dst saved".paintGreen() }
                 }
             } else {
                 registerHash(digest)

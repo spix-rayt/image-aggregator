@@ -3,8 +3,6 @@ package io.spixy.imageaggregator.imghash
 import mu.KotlinLogging
 import java.awt.image.BufferedImage
 import java.io.File
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 import javax.imageio.IIOException
 import javax.imageio.ImageIO
 import kotlin.math.absoluteValue
@@ -127,7 +125,7 @@ class ImageHashUtil(private val floatArray: FloatArray, val width: Int, val heig
             return arr1.zip(arr2) { b1, b2 -> (b1.toInt() - b2.toInt()).absoluteValue }.sum()
         }
 
-        fun getImageDimensions(file: File): Pair<Int, Int>? {
+        fun getImageDimensionsAndSize(file: File): Triple<Int, Int, Long>? {
             val bufferedImage = try {
                 ImageIO.read(file) ?: return null
             } catch (e: IIOException) {
@@ -135,7 +133,7 @@ class ImageHashUtil(private val floatArray: FloatArray, val width: Int, val heig
                 return null
             }
 
-            return bufferedImage.width to bufferedImage.height
+            return Triple(bufferedImage.width, bufferedImage.height, file.length())
         }
     }
 }
