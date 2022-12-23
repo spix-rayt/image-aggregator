@@ -113,6 +113,7 @@ class JoyreactorScraper(private val config: Config.Joyreactor): RestScraper() {
                             retriesLeft = 0
                         } catch (e: IOException) {
                             log.error(e) { "download error. retriesLeft = $retriesLeft" }
+                            log.info("waiting 30 seconds...")
                             delay(30.seconds)
                         }
                     }
@@ -120,8 +121,10 @@ class JoyreactorScraper(private val config: Config.Joyreactor): RestScraper() {
                     if (bytes != null) {
                         val file = File("images/download/joyreactor/${escapeTag(tag)}/$fileName")
                         bytes = removeBottomJoyreactorLine(bytes, file.extension)
-                        val fileBytesHash = bytes.md5()
-                        writeFile(file, bytes, fileBytesHash, fileName.md5())
+                        if(bytes != null) {
+                            val fileBytesHash = bytes.md5()
+                            writeFile(file, bytes, fileBytesHash, fileName.md5())
+                        }
                     }
                 }
             }
@@ -132,7 +135,7 @@ class JoyreactorScraper(private val config: Config.Joyreactor): RestScraper() {
         val id = Base64.decodeBase64(attribute.id).toString(StandardCharsets.UTF_8)
             .split(":").last().toInt()
         val tags = post.tags
-            .take(3)
+            .take(4)
             .joinToString("-") { escapeTag(it.name) }
             .ifEmpty { "picture" }
         val extension = attribute.image.type.name.lowercase()
@@ -143,12 +146,17 @@ class JoyreactorScraper(private val config: Config.Joyreactor): RestScraper() {
         return tag.replace(regex, "-")
     }
 
-    private fun removeBottomJoyreactorLine(imgBytes: ByteArray, format: String): ByteArray {
+    private fun removeBottomJoyreactorLine(imgBytes: ByteArray, format: String): ByteArray? {
         ImageIO.setUseCache(false)
-        val img = ImageIO.read(ByteArrayInputStream(imgBytes))
-        val newImg = img.getSubimage(0, 0, img.width, img.height - 14)
-        val byteArrayOutputStream = ByteArrayOutputStream()
-        ImageIO.write(newImg, format, byteArrayOutputStream)
-        return byteArrayOutputStream.toByteArray()
+        try {
+            val img = ImageIO.read(ByteArrayInputStream(imgBytes))
+            val newImg = img.getSubimage(0, 0, img.width, img.height - 14)
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            ImageIO.write(newImg, format, byteArrayOutputStream)
+            return byteArrayOutputStream.toByteArray()
+        } catch (e: Exception) {
+            log.error(e.message, e)
+            return null
+        }
     }
 }

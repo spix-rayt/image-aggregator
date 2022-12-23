@@ -136,7 +136,8 @@ class WebUIController(private val config: Config.WebUI, val telegramScraper: Tel
                             "right" to Img("/${current.right.file.toPath()}",
                                 width = current.right.width,
                                 height =  current.right.height,
-                                size = formatSize(current.right.size))
+                                size = formatSize(current.right.size)),
+                            "treshold" to ImageSimilarityService.similarityTreshold
                         )
                         call.respond(render("similars.hbs", model))
                     } catch (e: Exception) {

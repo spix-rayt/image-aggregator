@@ -1,5 +1,5 @@
 # Image Aggregator
-Background process which download new images from VK, Reddit and Joyreactor
+Background process which download new (last N) images from VK, Reddit and Joyreactor
 
 ## Web UI pages
 
@@ -27,8 +27,33 @@ Then you can find similar images, and select which image should be saved or dele
 
 \* Delete - instead of deleting image file service always moves it to image/trash directory
 
+## Run native
+create config file _config.yml_
 
-## config.yml - create this file before run app
+##### run from source
+```
+./gradlew run
+```
+
+##### or build jar and run
+```
+./gradlew customFatJar
+java -jar build/libs/all-in-one-jar-0.1-SNAPSHOT.jar
+```
+
+## Run in docker
+create workdir _/root/appworkdir_  
+create config file _/root/appworkdir/config.yml_  
+```
+./gradlew customFatJar
+docker image build -t image-aggregator .
+docker run -p 8080:8080 -v /root/appworkdir/:/workdir -i -t image-aggregator
+```
+
+
+
+
+## config.yml
 ```yaml
 # Web UI settings
 webUi:
@@ -75,7 +100,8 @@ vk:
 telegram:
   # Your phone number for sign in telegram account
   phone: +380399958165
-  # Telegram internal chat IDs
+  # Telegram internal chat IDs (optional. run app for get chat ids)
+  # All chatIds from your telegram account will be logged after successful auth
   chatIds:
     - -123
     - -456
@@ -98,3 +124,6 @@ telegram:
 - [x] Web interface
 - [x] Similar images finder
 - [ ] Image organizer
+
+#### other
+- [x] Docker (archlinux amd64)

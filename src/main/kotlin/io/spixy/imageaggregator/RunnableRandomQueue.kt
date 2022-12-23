@@ -25,7 +25,7 @@ object RunnableRandomQueue {
             } else {
                 delay(20.seconds)
                 if(queue.isEmpty()) {
-                    log.info { "Queue empty. Waiting..." }
+                    log.info { "Queue empty. Waiting new tasks..." }
                     while (queue.isEmpty()) {
                         delay(1.seconds)
                     }

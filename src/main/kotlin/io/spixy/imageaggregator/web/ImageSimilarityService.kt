@@ -5,7 +5,6 @@ import io.spixy.imageaggregator.*
 import io.spixy.imageaggregator.imghash.ImageHashUtil
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.collect
 import mu.KotlinLogging
 import org.apache.commons.codec.binary.Base64
 import java.io.File
@@ -16,7 +15,8 @@ private val log = KotlinLogging.logger {}
 
 object ImageSimilarityService {
 
-    private const val SIMILARITY_TRESHOLD = 500
+    var similarityTreshold = 50
+        private set
 
     private val gson = Gson()
 
@@ -152,7 +152,7 @@ object ImageSimilarityService {
             if(imgDigestLeft != null) {
                 shuffled.forEach { imgDigestRight ->
                     if(imgDigestLeft !== imgDigestRight) {
-                        test(imgDigestLeft, imgDigestRight)?.let { return it }
+                        test(imgDigestLeft, imgDigestRight)?.let { return it.swappedLeftAndRight() }
                     }
                 }
             } else {
@@ -163,16 +163,21 @@ object ImageSimilarityService {
         //Then trying to find random pair of similar images
         shuffled.subList(0, shuffled.lastIndex).forEachIndexed { index, imgDigest1 ->
             shuffled.subList(index + 1, shuffled.size).forEach { imgDigest2 ->
-                test(imgDigest1, imgDigest2)?.let { return it }
+                test(imgDigest1, imgDigest2)?.let { return it.swappedLeftAndRight() }
             }
         }
+        if(similarityTreshold < 700) {
+            similarityTreshold += 50
+            findNextSimilars()
+        }
+
         return null
     }
 
     private fun test(imgDigest1: ImageDigest, imgDigest2: ImageDigest): LeftAndRightImage? {
         if(notSkippedBefore(imgDigest1, imgDigest2)) {
             val dist = ImageHashUtil.distance(imgDigest1.avgHash, imgDigest2.avgHash)
-            if(dist < SIMILARITY_TRESHOLD) {
+            if(dist < similarityTreshold) {
                 if(imgDigest1.file.exists() && imgDigest2.file.exists()) {
                     val i1DimSize = ImageHashUtil.getImageDimensionsAndSize(imgDigest1.file)
                     val i2DimSize = ImageHashUtil.getImageDimensionsAndSize(imgDigest2.file)
@@ -210,7 +215,11 @@ object ImageSimilarityService {
         return !skippedImagePairs.contains(SkippedImagePair(a.file.normalize().path, b.file.normalize().path))
     }
 
-    class LeftAndRightImage(val left: Image, val right: Image, val dist: Int)
+    class LeftAndRightImage(val left: Image, val right: Image, val dist: Int) {
+        fun swappedLeftAndRight(): LeftAndRightImage {
+            return LeftAndRightImage(right, left, dist)
+        }
+    }
 
     class Image(val file: File, val width: Int, val height: Int, val size: Long)
 

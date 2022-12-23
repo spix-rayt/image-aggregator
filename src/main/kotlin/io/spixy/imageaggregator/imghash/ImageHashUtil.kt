@@ -85,7 +85,7 @@ class ImageHashUtil(private val floatArray: FloatArray, val width: Int, val heig
         fun read(file: File): ImageHashUtil? {
             val bufferedImage = try {
                 ImageIO.read(file) ?: return null
-            } catch (e: IIOException) {
+            } catch (e: Exception) {
                 log.error("Read image error $file", e)
                 return null
             }
