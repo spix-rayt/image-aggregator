@@ -18,7 +18,6 @@ import kotlin.coroutines.suspendCoroutine
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-
 private val log = KotlinLogging.logger {}
 
 class TelegramScraper(private val config: Config.Telegram) : Scraper() {
@@ -109,8 +108,7 @@ class TelegramScraper(private val config: Config.Telegram) : Scraper() {
         delay(10000L)
 
         while (!canQuit) {
-            config.chatIds
-                .forEach { chatId ->
+            config.chatIds.forEach { chatId ->
                     val chat = chats[chatId]
                     if(chat != null) {
                         log.info { "Get chat history ${chat.title} (${chat.id})" }

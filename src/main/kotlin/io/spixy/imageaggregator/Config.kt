@@ -31,7 +31,7 @@ data class Config(
     @Serializable
     data class Telegram(
         val phone: String,
-        val chatIds: List<Long>? = null
+        val chatIds: List<Long> = emptyList()
     )
 
     @Serializable
